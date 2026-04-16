@@ -14,7 +14,7 @@ Architecture:
           └───────────────────queue.get()─────────────────────────────┘
 
 Usage:
-    from cobra_reader import CobraReader
+    from cobra_bridge.reader import CobraReader
 
     reader = CobraReader(serial_port)
     reader.start()
@@ -37,7 +37,7 @@ import time
 from queue import Queue, Full, Empty
 from typing import Optional, Tuple
 
-from cobra_constants import HEADER, STATUS_OK
+from cobra_bridge.constants import HEADER, STATUS_OK
 
 
 class CobraReader(threading.Thread):

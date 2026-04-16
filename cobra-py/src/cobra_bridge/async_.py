@@ -15,9 +15,9 @@ Key improvements over Sync tier:
   - BMM350 read_sensor() is non-blocking with stale-data eviction
 
 Usage:
-    from cobra_transport import SerialTransport, BleTransport
-    from cobra_async import AsyncBridge
-    from bmm350_async import BMM350Async
+    from cobra_bridge.transport import SerialTransport, BleTransport
+    from cobra_bridge.async_ import AsyncBridge
+    from cobra_bridge.drivers.bmm350_async import BMM350Async
 
     # USB-Serial
     transport = SerialTransport(port='/dev/ttyACM0')
@@ -48,10 +48,10 @@ import time
 import threading
 from typing import Optional
 
-from cobra_sync import CobraBridge
-from cobra_reader import CobraReader
-from cobra_transport import Transport, SerialTransport
-from cobra_constants import (
+from cobra_bridge.sync import CobraBridge
+from cobra_bridge.reader import CobraReader
+from cobra_bridge.transport import Transport, SerialTransport
+from cobra_bridge.constants import (
     HEADER, TYPE_GET, TYPE_SET,
     CMD_I2C_READ, CMD_I2C_WRITE,
     CMD_SPI_READ, CMD_SPI_WRITE,

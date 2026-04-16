@@ -14,10 +14,11 @@ Key changes from V1:
   - set_odr(frequency_hz) with user-friendly Hz input
 
 Usage:
-    from cobra_sync import CobraBridge
-    from bmm350_sync import BMM350
+    from cobra_bridge.sync import CobraBridge
+    from cobra_bridge.drivers.bmm350 import BMM350
 
-    bridge = CobraBridge(port='/dev/ttyACM0')
+    transport = SerialTransport(port='/dev/ttyACM0')
+    bridge = CobraBridge(transport=transport)
     bridge.connect()
 
     sensor = BMM350(bridge)
@@ -43,7 +44,7 @@ import struct
 import time
 from typing import Dict, Optional, Tuple
 
-from cobra_constants import (
+from cobra_bridge.constants import (
     BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_DATA_LEN,
     BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_AVG, BMM350_OTP_ADDR,
     BMM350_LSB_TO_UT_XY, BMM350_LSB_TO_UT_Z, BMM350_LSB_TO_DEGC, BMM350_TEMP_OFFSET,

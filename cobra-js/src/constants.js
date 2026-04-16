@@ -1,10 +1,9 @@
 /**
- * COBRA Protocol Constants — JavaScript (WebSerial)
+ * COBRA Protocol Constants — JavaScript
  *
  * AUTO-GENERATED from core/protocol_spec.json.
- * Do not edit manually — update protocol_spec.json and regenerate.
- *
- * To regenerate: python generate_constants_js.py
+ * Do not edit manually — update protocol_spec.json and run:
+ *     python tools/gen_constants.py
  */
 
 export const HEADER = 0xAA;
@@ -41,11 +40,11 @@ export const SPI_SPEED_10MHZ = 1;
 export const SPI_MODE_0 = 0;
 export const SPI_MODE_3 = 3;
 
-// ── BMM350 (from sensors.bmm350) ──────────────────────────────────────────
+// ── BMM350 ──────────────────────────────────────────────────────────────
 
 export const BMM350_I2C_ADDR = 0x14;
 export const BMM350_CHIP_ID = 0x33;
-export const BMM350_DATA_LEN = 12; // bytes per sample (24-bit × 4 channels)
+export const BMM350_DATA_LEN = 12; // bytes per sample (24-bit x 4 channels)
 
 export const BMM350_REG = {
     CHIP_ID: 0x00,  // Chip ID (expected 0x33)
@@ -123,7 +122,7 @@ export const BMM350_OTP_ADDR = {
 
 // ── BMM350 Conversion Coefficients (Bosch BMM350_SensorAPI v1.10.0) ────
 
-export const BMM350_LSB_TO_UT_XY = 0.007069979;  // μT/LSB for X,Y axes
-export const BMM350_LSB_TO_UT_Z = 0.007174964;   // μT/LSB for Z axis
-export const BMM350_LSB_TO_DEGC = 0.000981282;  // °C/LSB for temperature
-export const BMM350_TEMP_OFFSET = 25.49;  // °C offset
+export const BMM350_LSB_TO_UT_XY = 0.007069979;  // uT/LSB for X,Y axes
+export const BMM350_LSB_TO_UT_Z = 0.007174964;   // uT/LSB for Z axis
+export const BMM350_LSB_TO_DEGC = 0.000981282;  // degC/LSB for temperature
+export const BMM350_TEMP_OFFSET = 25.49;  // degC offset

@@ -11,8 +11,8 @@ Packet building, parsing, checksums, and the I2C/SPI/board API
 remain identical regardless of connection type.
 
 Usage:
-    from cobra_transport import SerialTransport, BleTransport
-    from cobra_sync import CobraBridge
+    from cobra_bridge.transport import SerialTransport, BleTransport
+    from cobra_bridge.sync import CobraBridge
 
     # USB-Serial
     transport = SerialTransport(port='/dev/ttyACM0')
@@ -38,7 +38,7 @@ import struct
 import time
 from typing import Optional
 
-from cobra_constants import (
+from cobra_bridge.constants import (
     HEADER, TYPE_GET, TYPE_SET,
     CMD_I2C_READ, CMD_I2C_WRITE,
     CMD_SPI_READ, CMD_SPI_WRITE,
@@ -48,7 +48,7 @@ from cobra_constants import (
     SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
     SPI_MODE_0, SPI_MODE_3,
 )
-from cobra_transport import Transport, SerialTransport
+from cobra_bridge.transport import Transport, SerialTransport
 
 
 class CobraBridge:

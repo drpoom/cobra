@@ -106,7 +106,8 @@
     <main>
         <!-- Connect -->
         <div class="card">
-            <button id="btn-connect" onclick="handleConnect()">🔌 Connect AppBoard</button>
+            <button id="btn-connect" onclick="handleConnect('serial')">🔌 Connect USB</button>
+            <button id="btn-connect-ble" onclick="handleConnect('ble')">📡 Connect BLE</button>
             <div style="margin-top:0.6rem">
                 <span class="led" id="led"></span>
                 <span id="status-text">Not connected</span>
@@ -192,9 +193,10 @@
     </main>
 
     <script type="module">
-        import { CobraBridge } from './cobra_sync.js';
-        import { BMM350 } from './bmm350.js';
-        import { BMM350_CHIP_ID, BMM350_PMU, BMM350_ODR } from './cobra_constants.js';
+        import { SerialTransport, BleTransport } from './src/transport.js';
+        import { CobraBridge } from './src/sync.js';
+        import { BMM350 } from './src/drivers/bmm350.js';
+        import { BMM350_CHIP_ID, BMM350_PMU, BMM350_ODR } from './src/constants.js';
 
         let bridge = null;
         let sensor = null;
@@ -292,14 +294,19 @@
 
         // ── Connection ──────────────────────────────────────────────────
 
-        window.handleConnect = async () => {
+        window.handleConnect = async (transportType = 'serial') => {
             try {
-                bridge = new CobraBridge();
+                const transport = transportType === 'ble'
+                    ? new BleTransport()
+                    : new SerialTransport();
+                bridge = new CobraBridge(transport);
                 await bridge.connect();
                 setStatus('Connected', 'on');
-                document.getElementById('btn-connect').textContent = '🔌 Connected';
+                const label = transportType === 'ble' ? 'BLE' : 'USB';
+                document.getElementById('btn-connect').textContent = `🔌 ${label} Connected`;
                 document.getElementById('btn-connect').disabled = true;
-                log('WebSerial connected', 'ok');
+                document.getElementById('btn-connect-ble').disabled = true;
+                log(`${label} connected`, 'ok');
 
                 // Create sensor instance
                 sensor = new BMM350(bridge);
@@ -425,7 +432,7 @@
         // ── Init ────────────────────────────────────────────────────────
 
         drawCompass(0, 0);
-        log('COBRA V4.1 — BMM350 driver with Bosch SensorAPI v1.10.0 conversion', 'info');
+        log('COBRA.js — BMM350 driver with Bosch SensorAPI v1.10.0 conversion', 'info');
         log('24-bit data, official μT/°C coefficients, OTP compensation', 'info');
         log('Ready. Connect your Bosch AppBoard 3.1 via USB.', 'info');
     </script>

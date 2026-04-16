@@ -1,18 +1,24 @@
 /**
- * COBRA Sync — Synchronous Protocol Bridge (JavaScript/WebSerial)
+ * COBRA Sync — Synchronous Protocol Bridge (JavaScript)
  *
- * Implements the COINES V3 binary protocol over WebSerial API.
+ * Implements the COINES V3 binary protocol over any Transport backend.
  * Transport-agnostic: works with SerialTransport (WebSerial) or BleTransport (WebBluetooth).
- * Mirrors python/cobra_sync.py — same packet building/parsing, same API.
- * See ../core/PROTOCOL.md for the language-agnostic specification.
+ * Mirrors python cobra_bridge.sync — same packet building/parsing, same API.
+ * See core/PROTOCOL.md for the language-agnostic specification.
  *
  * Usage:
- *   import { CobraBridge } from './cobra_sync.js';
- *   const bridge = new CobraBridge();
+ *   import { SerialTransport, BleTransport } from './transport.js';
+ *   import { CobraBridge } from './sync.js';
+ *
+ *   // USB-Serial
+ *   const transport = new SerialTransport();
+ *   const bridge = new CobraBridge(transport);
  *   await bridge.connect();
- *   const chipId = await bridge.i2cRead(0x14, 0x00, 1);
- *   console.log(`Chip ID: 0x${chipId[0].toString(16).padStart(2, '0')}`);
- *   await bridge.disconnect();
+ *
+ *   // BLE
+ *   const transport = new BleTransport();
+ *   const bridge = new CobraBridge(transport);
+ *   await bridge.connect();
  */
 
 import {
@@ -24,77 +30,34 @@ import {
     I2C_SPEED_400K, I2C_SPEED_1M,
     SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
     SPI_MODE_0, SPI_MODE_3,
-} from './cobra_constants.js';
+} from './constants.js';
 
 
 export class CobraBridge {
-    constructor() {
-        this.port = null;
-        this._reader = null;
-        this._writer = null;
-        this._readBuffer = new Uint8Array(0);
+    /**
+     * Create a CobraBridge with a transport backend.
+     *
+     * @param {Object} transport - A transport instance (SerialTransport or BleTransport)
+     *   Must implement: connect(), disconnect(), send(data), receive(count, timeout), connected
+     */
+    constructor(transport) {
+        if (!transport) {
+            throw new Error('CobraBridge requires a transport. Use SerialTransport or BleTransport.');
+        }
+        this._transport = transport;
     }
 
     // ── Connection ──────────────────────────────────────────────────────
 
-    async connect(baudRate = 115200) {
-        if (!('serial' in navigator)) {
-            throw new Error('WebSerial not supported. Use Chrome 89+ or Edge 89+.');
-        }
-        this.port = await navigator.serial.requestPort();
-        await this.port.open({ baudRate });
-        this._writer = this.port.writable.getWriter();
-        // Don't grab reader yet — do it lazily to avoid locking issues
+    async connect() {
+        await this._transport.connect();
     }
 
     async disconnect() {
-        if (this._reader) {
-            await this._reader.cancel().catch(() => {});
-            this._reader.releaseLock();
-            this._reader = null;
-        }
-        if (this._writer) {
-            await this._writer.close().catch(() => {});
-            this._writer = null;
-        }
-        if (this.port) {
-            await this.port.close().catch(() => {});
-            this.port = null;
-        }
-        this._readBuffer = new Uint8Array(0);
+        await this._transport.disconnect();
     }
 
-    get connected() { return this.port !== null; }
-
-    // ── Internal: read bytes into buffer ───────────────────────────────
-
-    async _ensureReader() {
-        if (!this._reader && this.port?.readable) {
-            this._reader = this.port.readable.getReader();
-        }
-        return this._reader;
-    }
-
-    async _fillBuffer(needed) {
-        const reader = await this._ensureReader();
-        while (this._readBuffer.length < needed) {
-            const { value, done } = await reader.read();
-            if (done) throw new Error('Serial stream closed');
-            if (value && value.length > 0) {
-                const prev = this._readBuffer;
-                const next = new Uint8Array(prev.length + value.length);
-                next.set(prev, 0);
-                next.set(value, prev.length);
-                this._readBuffer = next;
-            }
-        }
-    }
-
-    _consume(n) {
-        const consumed = this._readBuffer.slice(0, n);
-        this._readBuffer = this._readBuffer.slice(n);
-        return consumed;
-    }
+    get connected() { return this._transport.connected; }
 
     // ── Low-Level Protocol (core/PROTOCOL.md §1) ─────────────────────
 
@@ -120,59 +83,54 @@ export class CobraBridge {
     }
 
     async sendPacket(type, command, payload = new Uint8Array(0)) {
-        if (!this._writer) throw new Error('Not connected');
+        if (!this.connected) throw new Error('Not connected');
         const pkt = this.buildPacket(type, command, payload);
-        await this._writer.write(pkt);
+        await this._transport.send(pkt);
     }
 
     async receivePacket(timeout = 2000) {
-        if (!this.port) throw new Error('Not connected');
+        if (!this.connected) throw new Error('Not connected');
 
         const deadline = Date.now() + timeout;
 
         // 1. Find header 0xAA — skip garbage
+        let found = false;
         while (Date.now() < deadline) {
-            await this._fillBuffer(this._readBuffer.length + 1);
-            const idx = this._readBuffer.indexOf(HEADER);
-            if (idx >= 0) {
-                // Discard bytes before header
-                this._consume(idx);
+            const buf = await this._transport.receive(1, deadline - Date.now());
+            if (buf[0] === HEADER) {
+                found = true;
                 break;
             }
-            // Keep only last byte (might be partial header)
-            if (this._readBuffer.length > 1) {
-                this._readBuffer = this._readBuffer.slice(-1);
-            }
         }
-        if (this._readBuffer.length === 0 || this._readBuffer[0] !== HEADER) {
+        if (!found) {
             throw new Error('No header received within timeout');
         }
 
         // 2. Read rest of header (4 bytes: type, command, len_lo, len_hi)
-        await this._fillBuffer(5);
-        const ptype = this._readBuffer[1];
-        const command = this._readBuffer[2];
-        const length = this._readBuffer[3] | (this._readBuffer[4] << 8);
+        const headerRest = await this._transport.receive(4, deadline - Date.now());
+        const ptype = headerRest[0];
+        const command = headerRest[1];
+        const length = headerRest[2] | (headerRest[3] << 8);
 
         // 3. Read payload + checksum
-        const totalLen = 5 + length + 1; // header(5) + payload(length) + xor(1)
-        await this._fillBuffer(totalLen);
+        const payloadAndXor = await this._transport.receive(length + 1, deadline - Date.now());
+        const payload = payloadAndXor.slice(0, length);
+        const receivedXor = payloadAndXor[length];
 
-        const payload = this._readBuffer.slice(5, 5 + length);
-        const receivedXor = this._readBuffer[5 + length];
-
-        // 4. Verify checksum (over header + payload, NOT including xor byte)
-        const frame = this._readBuffer.slice(0, 5 + length);
+        // 4. Verify checksum
+        const frame = new Uint8Array(5 + length);
+        frame[0] = HEADER;
+        frame[1] = ptype;
+        frame[2] = command;
+        frame[3] = length & 0xFF;
+        frame[4] = (length >> 8) & 0xFF;
+        frame.set(payload, 5);
         const expectedXor = CobraBridge.checksum(frame);
         if (expectedXor !== receivedXor) {
-            this._consume(1); // Skip bad header byte, try resync
             throw new Error(`Checksum mismatch: 0x${expectedXor.toString(16)} vs 0x${receivedXor.toString(16)}`);
         }
 
-        // 5. Consume full packet from buffer
-        this._consume(totalLen);
-
-        // 6. Extract status (first payload byte) and data
+        // 5. Extract status (first payload byte) and data
         const status = payload.length > 0 ? payload[0] : STATUS_OK;
         const data = payload.length > 1 ? payload.slice(1) : new Uint8Array(0);
 

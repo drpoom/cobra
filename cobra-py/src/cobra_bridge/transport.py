@@ -29,8 +29,8 @@ COINES V3 packets travel as raw bytes over NUS — same framing,
 same checksums, same protocol. Only the transport layer differs.
 
 Usage:
-    from cobra_transport import SerialTransport, BleTransport
-    from cobra_sync import CobraBridge
+    from cobra_bridge.transport import SerialTransport, BleTransport
+    from cobra_bridge.sync import CobraBridge
 
     # USB-Serial
     transport = SerialTransport(port='/dev/ttyACM0')

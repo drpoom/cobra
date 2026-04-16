@@ -13,10 +13,11 @@ Key changes from V1:
   - set_odr(frequency_hz) with user-friendly Hz input
 
 Usage:
-    from cobra_async import AsyncBridge
-    from bmm350_async import BMM350Async
+    from cobra_bridge.async_ import AsyncBridge
+    from cobra_bridge.drivers.bmm350_async import BMM350Async
 
-    bridge = AsyncBridge(port='/dev/ttyACM0')
+    transport = SerialTransport(port='/dev/ttyACM0')
+    bridge = AsyncBridge(transport=transport)
     bridge.connect()
 
     sensor = BMM350Async(bridge)
@@ -39,7 +40,7 @@ import struct
 import time
 from typing import Dict, Optional
 
-from cobra_constants import (
+from cobra_bridge.constants import (
     TYPE_GET, CMD_I2C_READ, CMD_I2C_WRITE,
     I2C_SPEED_400K, STATUS_OK,
     BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_DATA_LEN,
