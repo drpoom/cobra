@@ -38,14 +38,14 @@ export const I2C_SPEED_1M = 1;
 // SPI Speed & Mode
 export const SPI_SPEED_5MHZ = 0;
 export const SPI_SPEED_10MHZ = 1;
-export const MODE_0 = 0;
-export const MODE_3 = 3;
+export const SPI_MODE_0 = 0;
+export const SPI_MODE_3 = 3;
 
 // ── BMM350 (from sensors.bmm350) ──────────────────────────────────────────
 
-export const BMM350_I2C_ADDR  = 0x14;
-export const BMM350_CHIP_ID   = 0x33;
-export const BMM350_SENSITIVITY = 0.166667;
+export const BMM350_I2C_ADDR = 0x14;
+export const BMM350_CHIP_ID = 0x33;
+export const BMM350_SENSITIVITY = 1 / 6; // μT per LSB
 
 export const BMM350_REG = {
     CHIP_ID: 0x00,
@@ -81,12 +81,13 @@ export const BMM350_PMU = {
     SOFT_RESET: 0x80,
 };
 
+// ODR map: human Hz → register value  (bracket access: BMM350_ODR[400])
 export const BMM350_ODR = {
-    400_HZ: 0x00,
-    200_HZ: 0x01,
-    100_HZ: 0x02,
-    50_HZ: 0x03,
-    25_HZ: 0x04,
-    12_5_HZ: 0x05,
-    6_25_HZ: 0x06,
+    400: 0x00,
+    200: 0x01,
+    100: 0x02,
+    50: 0x03,
+    25: 0x04,
+    '12.5': 0x05,
+    '6.25': 0x06,
 };

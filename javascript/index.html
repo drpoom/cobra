@@ -2,97 +2,140 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COBRA — BMM350 Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>COBRA — BMM350</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'SF Mono', 'Cascadia Code', monospace; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+        :root {
+            --bg: #0a0a0a; --card: #111; --border: #222; --accent: #e94560;
+            --green: #44ff44; --red: #ff4444; --blue: #339af0;
+            --text: #e0e0e0; --dim: #666; --muted: #888;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+               background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh;
+               overflow-x: hidden; }
 
-        header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 1.5rem; border-bottom: 2px solid #0f3460; }
-        h1 { font-size: 1.8rem; color: #e94560; }
-        h1 span { color: #888; font-size: 1rem; font-weight: normal; }
-        .subtitle { color: #666; font-size: 0.85rem; margin-top: 0.25rem; }
+        /* Header */
+        header { background: linear-gradient(135deg, #1a1a2e, #16213e);
+                 padding: 1rem 1.25rem; border-bottom: 2px solid #0f3460;
+                 position: sticky; top: 0; z-index: 10; }
+        h1 { font-size: 1.3rem; color: var(--accent); display: flex; align-items: center; gap: 0.5rem; }
+        h1 .tag { color: var(--dim); font-size: 0.75rem; font-weight: normal;
+                  background: #1a1a2e; padding: 2px 8px; border-radius: 4px; }
+        .subtitle { color: var(--dim); font-size: 0.75rem; margin-top: 0.2rem; }
 
-        main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+        main { max-width: 600px; margin: 0 auto; padding: 1rem; }
 
-        .card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-        .card h2 { color: #e94560; font-size: 1.1rem; margin-bottom: 1rem; }
+        /* Cards */
+        .card { background: var(--card); border: 1px solid var(--border);
+                border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+        .card h2 { color: var(--accent); font-size: 0.95rem; margin-bottom: 0.75rem; }
 
-        .connect-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-        button { background: #e94560; color: #fff; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-family: inherit; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; }
-        button:hover { background: #ff6b81; transform: translateY(-1px); }
-        button:disabled { background: #333; cursor: not-allowed; transform: none; }
-        button.secondary { background: #1a1a2e; border: 1px solid #333; }
-        button.secondary:hover { background: #16213e; }
+        /* Buttons */
+        button { background: var(--accent); color: #fff; border: none;
+                 padding: 0.65rem 1.25rem; border-radius: 8px;
+                 font-family: inherit; font-size: 0.9rem; cursor: pointer;
+                 transition: all 0.15s; width: 100%; font-weight: 600; }
+        button:active { transform: scale(0.97); }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
+        button.secondary { background: #1a1a2e; border: 1px solid var(--border); color: var(--text); }
 
-        .status-led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #333; margin-right: 8px; vertical-align: middle; }
-        .status-led.on { background: #44ff44; box-shadow: 0 0 8px #44ff44; }
-        .status-led.err { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+        /* Status */
+        .led { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+               background: #333; margin-right: 6px; vertical-align: middle; }
+        .led.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .led.err { background: var(--red); box-shadow: 0 0 6px var(--red); }
+        #status-text { font-size: 0.85rem; color: var(--muted); }
 
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-        .info-item { display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; background: #0a0a0a; border-radius: 6px; }
-        .info-label { color: #888; }
-        .info-value { color: #44ff44; font-weight: bold; }
+        /* Info grid */
+        .info-row { display: flex; justify-content: space-between; padding: 0.4rem 0;
+                    border-bottom: 1px solid #1a1a1a; font-size: 0.85rem; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--muted); }
+        .info-value { color: var(--green); font-weight: 700; }
 
-        .mag-display { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; text-align: center; }
-        .axis-card { background: #0a0a0a; border-radius: 8px; padding: 1rem; }
-        .axis-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 2px; }
-        .axis-value { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
-        .axis-unit { font-size: 0.75rem; color: #666; }
-        .axis-x .axis-value { color: #ff6b6b; }
-        .axis-y .axis-value { color: #51cf66; }
-        .axis-z .axis-value { color: #339af0; }
+        /* Compass */
+        .compass { width: 200px; height: 200px; margin: 1rem auto; position: relative; }
+        .compass canvas { width: 100%; height: 100%; }
+        .compass-heading { position: absolute; bottom: -1.5rem; left: 50%; transform: translateX(-50%);
+                           font-size: 1.8rem; font-weight: 900; color: var(--accent); }
 
-        .controls { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
-        select { background: #1a1a2e; color: #e0e0e0; border: 1px solid #333; padding: 0.5rem; border-radius: 6px; font-family: inherit; }
+        /* Mag axes */
+        .axes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center; }
+        .axis { background: var(--bg); border-radius: 8px; padding: 0.75rem 0.25rem; }
+        .axis-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
+                      letter-spacing: 2px; }
+        .axis-val { font-size: 1.8rem; font-weight: 900; margin: 0.25rem 0;
+                    font-variant-numeric: tabular-nums; }
+        .axis-unit { font-size: 0.65rem; color: var(--dim); }
+        .x .axis-val { color: #ff6b6b; }
+        .y .axis-val { color: #51cf66; }
+        .z .axis-val { color: var(--blue); }
 
-        .log { background: #050505; border: 1px solid #222; border-radius: 8px; padding: 1rem; max-height: 200px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; }
-        .log-entry { color: #888; }
-        .log-entry.ok { color: #44ff44; }
-        .log-entry.err { color: #ff4444; }
-        .log-entry.info { color: #339af0; }
+        /* Controls */
+        .controls { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .controls button { width: auto; flex: 1; min-width: 0; }
+        select { background: #1a1a2e; color: var(--text); border: 1px solid var(--border);
+                 padding: 0.5rem; border-radius: 8px; font-family: inherit; font-size: 0.85rem; }
 
-        .sample-counter { text-align: center; color: #666; font-size: 0.85rem; margin-top: 0.5rem; }
+        /* Sample counter */
+        .counter { text-align: center; color: var(--dim); font-size: 0.8rem; margin-top: 0.5rem; }
 
-        @media (max-width: 600px) {
-            .mag-display { grid-template-columns: 1fr; }
-            .info-grid { grid-template-columns: 1fr; }
-            .axis-value { font-size: 2rem; }
+        /* Log */
+        .log { background: #050505; border: 1px solid var(--border); border-radius: 8px;
+               padding: 0.75rem; max-height: 140px; overflow-y: auto; font-size: 0.75rem;
+               line-height: 1.5; -webkit-overflow-scrolling: touch; }
+        .log-entry { color: var(--muted); word-break: break-all; }
+        .log-entry.ok { color: var(--green); }
+        .log-entry.err { color: var(--red); }
+        .log-entry.info { color: var(--blue); }
+
+        /* Hidden sections */
+        .hidden { display: none !important; }
+
+        @media (max-width: 360px) {
+            .axis-val { font-size: 1.4rem; }
+            .compass { width: 160px; height: 160px; }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>🐍 COBRA <span>BMM350 Dashboard</span></h1>
-        <div class="subtitle">COines BRidge Access — WebSerial</div>
+        <h1>🐍 COBRA <span class="tag">V4</span></h1>
+        <div class="subtitle">BMM350 Magnetometer — WebSerial</div>
     </header>
 
     <main>
-        <!-- Connection Card -->
+        <!-- Connect -->
         <div class="card">
-            <h2>🔌 Connection</h2>
-            <div class="connect-row">
-                <button id="btn-connect" onclick="handleConnect()">Connect AppBoard</button>
-                <button id="btn-disconnect" onclick="handleDisconnect()" disabled class="secondary">Disconnect</button>
-                <span><span class="status-led" id="led-status"></span><span id="status-text">Not connected</span></span>
+            <button id="btn-connect" onclick="handleConnect()">🔌 Connect AppBoard</button>
+            <div style="margin-top:0.6rem">
+                <span class="led" id="led"></span>
+                <span id="status-text">Not connected</span>
             </div>
         </div>
 
-        <!-- Board Info Card -->
-        <div class="card" id="card-info" style="display:none">
-            <h2>📋 Board Info</h2>
-            <div class="info-grid" id="info-grid"></div>
+        <!-- Board Info -->
+        <div class="card hidden" id="card-info">
+            <h2>📋 Board</h2>
+            <div id="info-rows"></div>
         </div>
 
-        <!-- Sensor Card -->
-        <div class="card" id="card-sensor" style="display:none">
-            <h2>🧲 BMM350 Magnetometer</h2>
-            <div class="info-grid">
-                <div class="info-item"><span class="info-label">Chip ID</span><span class="info-value" id="chip-id">—</span></div>
-                <div class="info-item"><span class="info-label">Power Mode</span><span class="info-value" id="power-mode">—</span></div>
+        <!-- Sensor -->
+        <div class="card hidden" id="card-sensor">
+            <h2>🧲 BMM350</h2>
+            <div class="info-row">
+                <span class="info-label">Chip ID</span>
+                <span class="info-value" id="chip-id">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Power Mode</span>
+                <span class="info-value" id="power-mode">—</span>
             </div>
             <div class="controls">
-                <button id="btn-monitor" onclick="toggleMonitor()">Start Monitor</button>
+                <button id="btn-monitor" onclick="toggleMonitor()">▶ Start</button>
                 <select id="sel-odr">
                     <option value="25">25 Hz</option>
                     <option value="50">50 Hz</option>
@@ -103,30 +146,38 @@
             </div>
         </div>
 
-        <!-- Live Data Card -->
-        <div class="card" id="card-data" style="display:none">
-            <h2>📊 Live Data</h2>
-            <div class="mag-display">
-                <div class="axis-card axis-x">
-                    <div class="axis-label">X-Axis</div>
-                    <div class="axis-value" id="val-x">0.00</div>
+        <!-- Live Data -->
+        <div class="card hidden" id="card-data">
+            <h2>📊 Live</h2>
+            <div class="compass">
+                <canvas id="compass-canvas" width="200" height="200"></canvas>
+                <div class="compass-heading" id="heading">—°</div>
+            </div>
+            <div class="axes">
+                <div class="axis x">
+                    <div class="axis-label">X</div>
+                    <div class="axis-val" id="val-x">0.00</div>
                     <div class="axis-unit">μT</div>
                 </div>
-                <div class="axis-card axis-y">
-                    <div class="axis-label">Y-Axis</div>
-                    <div class="axis-value" id="val-y">0.00</div>
+                <div class="axis y">
+                    <div class="axis-label">Y</div>
+                    <div class="axis-val" id="val-y">0.00</div>
                     <div class="axis-unit">μT</div>
                 </div>
-                <div class="axis-card axis-z">
-                    <div class="axis-label">Z-Axis</div>
-                    <div class="axis-value" id="val-z">0.00</div>
+                <div class="axis z">
+                    <div class="axis-label">Z</div>
+                    <div class="axis-val" id="val-z">0.00</div>
                     <div class="axis-unit">μT</div>
                 </div>
             </div>
-            <div class="sample-counter">Samples: <span id="sample-count">0</span></div>
+            <div class="counter">
+                Samples: <span id="sample-count">0</span>
+                &nbsp;·&nbsp;
+                Rate: <span id="sample-rate">0</span> Hz
+            </div>
         </div>
 
-        <!-- Log Card -->
+        <!-- Log -->
         <div class="card">
             <h2>📝 Log</h2>
             <div class="log" id="log"></div>
@@ -135,11 +186,18 @@
 
     <script type="module">
         import { CobraBridge } from './cobra_core.js';
-        import { BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_SENSITIVITY } from './cobra_constants.js';
+        import {
+            BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_SENSITIVITY,
+            BMM350_REG, BMM350_PMU, BMM350_ODR, STATUS_OK,
+        } from './cobra_constants.js';
 
         let bridge = null;
         let monitoring = false;
+        let monitorRAF = null;
         let sampleCount = 0;
+        let startTime = 0;
+
+        // ── Logging ──────────────────────────────────────────────────────
 
         function log(msg, type = '') {
             const el = document.getElementById('log');
@@ -148,49 +206,136 @@
             el.scrollTop = el.scrollHeight;
         }
 
-        function setStatus(text, state = '') {
+        function setStatus(text, ledClass = '') {
             document.getElementById('status-text').textContent = text;
-            const led = document.getElementById('led-status');
-            led.className = 'status-led' + (state ? ' ' + state : '');
+            const led = document.getElementById('led');
+            led.className = 'led' + (ledClass ? ' ' + ledClass : '');
         }
+
+        function show(id) { document.getElementById(id).classList.remove('hidden'); }
+        function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // ── Compass Drawing ──────────────────────────────────────────────
+
+        function drawCompass(x, y) {
+            const canvas = document.getElementById('compass-canvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            const cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 10;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Outer ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Tick marks
+            for (let i = 0; i < 36; i++) {
+                const a = (i * 10) * Math.PI / 180;
+                const len = i % 9 === 0 ? 12 : 4;
+                const x1 = cx + (r - len) * Math.sin(a);
+                const y1 = cy - (r - len) * Math.cos(a);
+                const x2 = cx + r * Math.sin(a);
+                const y2 = cy - r * Math.cos(a);
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = i % 9 === 0 ? '#555' : '#333';
+                ctx.lineWidth = i % 9 === 0 ? 2 : 1;
+                ctx.stroke();
+            }
+
+            // Cardinal labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('N', cx, cy - r + 20);
+            ctx.fillText('S', cx, cy + r - 12);
+            ctx.fillText('E', cx + r - 16, cy + 4);
+            ctx.fillText('W', cx - r + 16, cy + 4);
+
+            // Needle
+            const heading = Math.atan2(y, x); // East = 0°
+            const needleLen = r - 20;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(heading - Math.PI / 2); // Adjust so N = up
+
+            // North half (red)
+            ctx.beginPath();
+            ctx.moveTo(0, -needleLen);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(5, 0);
+            ctx.closePath();
+            ctx.fillStyle = '#e94560';
+            ctx.fill();
+
+            // South half (gray)
+            ctx.beginPath();
+            ctx.moveTo(0, needleLen * 0.4);
+            ctx.lineTo(-4, 0);
+            ctx.lineTo(4, 0);
+            ctx.closePath();
+            ctx.fillStyle = '#333';
+            ctx.fill();
+
+            ctx.restore();
+
+            // Center dot
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#e94560';
+            ctx.fill();
+        }
+
+        // ── Connection ──────────────────────────────────────────────────
 
         window.handleConnect = async () => {
             try {
                 bridge = new CobraBridge();
                 await bridge.connect();
                 setStatus('Connected', 'on');
+                document.getElementById('btn-connect').textContent = '🔌 Connected';
                 document.getElementById('btn-connect').disabled = true;
-                document.getElementById('btn-disconnect').disabled = false;
-                log('Connected to AppBoard', 'ok');
+                log('WebSerial connected', 'ok');
 
-                // Read board info
+                // Board info
                 try {
                     const info = await bridge.getBoardInfo();
-                    document.getElementById('card-info').style.display = '';
-                    const grid = document.getElementById('info-grid');
-                    grid.innerHTML = `<div class="info-item"><span class="info-label">Board ID</span><span class="info-value">0x${info.boardId.toString(16).padStart(4, '0')}</span></div>`;
+                    show('card-info');
+                    const rows = document.getElementById('info-rows');
+                    rows.innerHTML = '';
+                    for (const [k, v] of Object.entries(info)) {
+                        if (k === 'raw') continue;
+                        const display = typeof v === 'number' ? `0x${v.toString(16).padStart(4, '0')}` : v;
+                        rows.innerHTML += `<div class="info-row"><span class="info-label">${k}</span><span class="info-value">${display}</span></div>`;
+                    }
                     log('Board info retrieved', 'ok');
                 } catch (e) {
-                    log('Board info unavailable: ' + e.message, 'err');
+                    log('Board info: ' + e.message, 'err');
                 }
 
-                // Read chip ID
-                document.getElementById('card-sensor').style.display = '';
-                const chipIdData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.CHIP_ID, 1);
-                const chipId = chipIdData[0];
+                // BMM350 chip ID
+                show('card-sensor');
+                const chipData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.CHIP_ID, 1);
+                const chipId = chipData[0];
                 document.getElementById('chip-id').textContent = `0x${chipId.toString(16).padStart(2, '0')}`;
 
                 if (chipId === BMM350_CHIP_ID) {
                     log(`BMM350 Chip ID: 0x${chipId.toString(16).padStart(2, '0')} ✓`, 'ok');
                 } else {
-                    log(`Chip ID: 0x${chipId.toString(16).padStart(2, '0')} — expected 0x33`, 'err');
+                    log(`Chip ID 0x${chipId.toString(16).padStart(2, '0')} — expected 0x33`, 'err');
                 }
 
-                // Read power mode
+                // Power mode
                 const pmuData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.PMU_STATUS, 1);
                 const pmuMode = pmuData[0] & 0x0F;
                 const modeNames = { 1: 'Suspend', 2: 'Normal', 3: 'Forced', 4: 'Continuous' };
-                document.getElementById('power-mode').textContent = modeNames[pmuMode] || `Unknown(0x${pmuMode.toString(16)})`;
+                document.getElementById('power-mode').textContent = modeNames[pmuMode] || `0x${pmuMode.toString(16)}`;
 
             } catch (e) {
                 log('Connection failed: ' + e.message, 'err');
@@ -199,50 +344,39 @@
             }
         };
 
-        window.handleDisconnect = async () => {
-            monitoring = false;
-            if (bridge) {
-                try {
-                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.SUSPEND]));
-                } catch {}
-                await bridge.disconnect();
-            }
-            bridge = null;
-            setStatus('Disconnected');
-            document.getElementById('btn-connect').disabled = false;
-            document.getElementById('btn-disconnect').disabled = true;
-            document.getElementById('btn-monitor').textContent = 'Start Monitor';
-            document.getElementById('card-info').style.display = 'none';
-            document.getElementById('card-sensor').style.display = 'none';
-            document.getElementById('card-data').style.display = 'none';
-            sampleCount = 0;
-            log('Disconnected', 'info');
-        };
+        // ── Monitor ─────────────────────────────────────────────────────
 
         window.toggleMonitor = async () => {
             if (!bridge) return;
             const btn = document.getElementById('btn-monitor');
 
             if (!monitoring) {
-                // Start monitoring
-                const odr = parseInt(document.getElementById('sel-odr').value);
-                const odrVal = BMM350_ODR[odr] ?? BMM350_ODR[100];
+                // Start
+                const odrHz = parseInt(document.getElementById('sel-odr').value);
+                const odrVal = BMM350_ODR[odrHz] ?? BMM350_ODR[100];
 
-                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.CONTINUOUS]));
+                // Set continuous mode
+                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD,
+                    new Uint8Array([BMM350_PMU.CONTINUOUS]));
 
                 // Set ODR
                 const curOdr = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS, 1);
                 const newOdr = (curOdr[0] & 0x8F) | ((odrVal & 0x07) << 4);
-                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS, new Uint8Array([newOdr]));
+                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS,
+                    new Uint8Array([newOdr]));
 
                 monitoring = true;
                 sampleCount = 0;
-                btn.textContent = 'Stop Monitor';
-                document.getElementById('card-data').style.display = '';
-                log(`Monitoring started @ ${odr} Hz`, 'info');
+                startTime = performance.now();
+                btn.textContent = '⏹ Stop';
+                btn.style.background = '#ff4444';
+                show('card-data');
+                log(`Monitoring @ ${odrHz} Hz`, 'info');
 
                 // Read loop
-                while (monitoring) {
+                const pollInterval = 1000 / (odrHz * 2); // Poll at 2x ODR
+                const readLoop = async () => {
+                    if (!monitoring) return;
                     try {
                         const statusData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.STATUS, 1);
                         if (statusData[0] & 0x01) {
@@ -256,23 +390,44 @@
                             document.getElementById('val-y').textContent = y.toFixed(2);
                             document.getElementById('val-z').textContent = z.toFixed(2);
                             sampleCount++;
+
+                            const elapsed = (performance.now() - startTime) / 1000;
                             document.getElementById('sample-count').textContent = sampleCount;
+                            document.getElementById('sample-rate').textContent =
+                                (sampleCount / elapsed).toFixed(1);
+
+                            // Compass
+                            drawCompass(x, y);
+                            const heading = Math.atan2(y, x) * 180 / Math.PI;
+                            document.getElementById('heading').textContent =
+                                `${((heading + 360) % 360).toFixed(0)}°`;
                         }
                     } catch (e) {
                         log('Read error: ' + e.message, 'err');
                     }
-                    await new Promise(r => setTimeout(r, 5));
-                }
+                    if (monitoring) {
+                        setTimeout(readLoop, pollInterval);
+                    }
+                };
+                readLoop();
+
             } else {
                 // Stop
                 monitoring = false;
-                btn.textContent = 'Start Monitor';
+                btn.textContent = '▶ Start';
+                btn.style.background = '';
                 try {
-                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.SUSPEND]));
+                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD,
+                        new Uint8Array([BMM350_PMU.SUSPEND]));
                 } catch {}
-                log(`Monitoring stopped (${sampleCount} samples)`, 'info');
+                log(`Stopped (${sampleCount} samples)`, 'info');
             }
         };
+
+        // ── Init ────────────────────────────────────────────────────────
+
+        drawCompass(0, 0); // Draw empty compass on load
+        log('Ready. Connect your Bosch AppBoard 3.1 via USB.', 'info');
     </script>
 </body>
 </html>

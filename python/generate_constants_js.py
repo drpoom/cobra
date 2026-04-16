@@ -81,16 +81,16 @@ def generate():
     for name, val in spec['spi']['speed'].items():
         lines.append(f"export const SPI_SPEED_{name} = {val};")
     for name, val in spec['spi']['mode'].items():
-        lines.append(f"export const {name} = {val};")
+        lines.append(f"export const SPI_{name} = {val};")
     lines.append('')
 
     # BMM350
     bmm = spec['sensors']['bmm350']
     lines.append('// ── BMM350 (from sensors.bmm350) ──────────────────────────────────────────')
     lines.append('')
-    lines.append(f"export const BMM350_I2C_ADDR  = {hex_val(bmm['i2c_addr'])};")
-    lines.append(f"export const BMM350_CHIP_ID   = {hex_val(bmm['chip_id'])};")
-    lines.append(f"export const BMM350_SENSITIVITY = {bmm['sensitivity_ut_per_lsb']};")
+    lines.append(f"export const BMM350_I2C_ADDR = {hex_val(bmm['i2c_addr'])};")
+    lines.append(f"export const BMM350_CHIP_ID = {hex_val(bmm['chip_id'])};")
+    lines.append(f"export const BMM350_SENSITIVITY = 1 / 6; // μT per LSB")
     lines.append('')
 
     # BMM350 Registers
@@ -111,12 +111,22 @@ def generate():
     lines.append('};')
     lines.append('')
 
-    # BMM350 ODR
+    # BMM350 ODR — use human Hz as keys (bracket access: BMM350_ODR[400])
+    lines.append('// ODR map: human Hz → register value  (bracket access: BMM350_ODR[400])')
     lines.append('export const BMM350_ODR = {')
-    odr_items = list(bmm['odr'].items())
-    for i, (name, val) in enumerate(odr_items):
+    # Convert keys like '400_HZ' → 400, '12_5_HZ' → '12.5', '6_25_HZ' → '6.25'
+    odr_display = {}
+    for name, val in bmm['odr'].items():
+        hz = name.replace('_HZ', '').replace('_', '.')
+        try:
+            hz = int(hz)
+        except ValueError:
+            hz = f"'{hz}'"  # Quote non-integer keys like '12.5'
+        odr_display[hz] = val
+    odr_items = list(odr_display.items())
+    for i, (hz, val) in enumerate(odr_items):
         comma = ',' if i < len(odr_items) - 1 else ','
-        lines.append(f"    {name}: {hex_val(val)}{comma}")
+        lines.append(f"    {hz}: {hex_val(val)}{comma}")
     lines.append('};')
 
     output = '\n'.join(lines) + '\n'
