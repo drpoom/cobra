@@ -45,6 +45,7 @@ Usage:
 See ../core/PROTOCOL.md for the language-agnostic specification.
 """
 
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -175,19 +176,29 @@ class SerialTransport(Transport):
         """Read exactly `count` bytes from serial."""
         if not self.connected:
             raise ConnectionError("Serial transport not connected")
+        t_out = timeout if timeout is not None else self._timeout
         old_timeout = self._ser.timeout
-        if timeout is not None:
-            self._ser.timeout = timeout
+        self._ser.timeout = t_out
         try:
-            data = self._ser.read(count)
-            if len(data) < count:
+            buf = bytearray()
+            deadline = time.monotonic() + t_out
+            while len(buf) < count:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self._ser.timeout = min(remaining, t_out)
+                chunk = self._ser.read(count - len(buf))
+                if not chunk:
+                    # read() returned empty — timeout expired for this chunk
+                    continue
+                buf.extend(chunk)
+            if len(buf) < count:
                 raise TimeoutError(
-                    f"Serial read timeout: wanted {count}, got {len(data)}"
+                    f"Serial read timeout: wanted {count}, got {len(buf)}"
                 )
-            return data
+            return bytes(buf)
         finally:
-            if timeout is not None:
-                self._ser.timeout = old_timeout
+            self._ser.timeout = old_timeout
 
     @property
     def connected(self) -> bool:
