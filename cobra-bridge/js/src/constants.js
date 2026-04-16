@@ -18,6 +18,8 @@ export const CMD_SET_VDD = 0x04;
 export const CMD_SET_PIN = 0x05;
 export const CMD_SET_VDDIO = 0x06;
 export const CMD_INT_CONFIG = 0x07;
+export const CMD_CONFIG_I2C_BUS = 0x08;
+export const CMD_CONFIG_SPI_BUS = 0x09;
 
 // I2C Commands
 export const CMD_I2C_WRITE = 0x0D;
@@ -30,11 +32,18 @@ export const CMD_SPI_READ = 0x14;
 // Response Status
 export const STATUS_OK = 0x00;
 
-// I2C Speed
+// I2C Bus & Speed
+export const I2C_BUS_0 = 0;
+export const I2C_BUS_1 = 1;
+export const I2C_SPEED_STANDARD = 0;
+export const I2C_SPEED_FAST = 1;
+export const I2C_SPEED_HIGH = 2;
 export const I2C_SPEED_400K = 0;
 export const I2C_SPEED_1M = 1;
 
-// SPI Speed & Mode
+// SPI Bus & Speed & Mode
+export const SPI_BUS_0 = 0;
+export const SPI_BUS_1 = 1;
 export const SPI_SPEED_5MHZ = 0;
 export const SPI_SPEED_10MHZ = 1;
 export const SPI_MODE_0 = 0;
@@ -133,3 +142,21 @@ export const BMM350_LSB_TO_UT_XY = 0.007069979;  // uT/LSB for X,Y axes
 export const BMM350_LSB_TO_UT_Z = 0.007174964;   // uT/LSB for Z axis
 export const BMM350_LSB_TO_DEGC = 0.000981282;  // degC/LSB for temperature
 export const BMM350_TEMP_OFFSET = 25.49;  // degC offset
+
+// ── Shuttle Board Pins (COINES_SHUTTLE_PIN_*) ────────────────────────────
+
+export const SHUTTLE_PIN_7 = 0x09;   // CS pin (standard AppBoard3.1 chip select)
+export const SHUTTLE_PIN_8 = 0x05;
+export const SHUTTLE_PIN_9 = 0x00;
+export const SHUTTLE_PIN_14 = 0x01;
+export const SHUTTLE_PIN_15 = 0x02;
+export const SHUTTLE_PIN_16 = 0x03;
+export const SHUTTLE_PIN_19 = 0x08;
+export const SHUTTLE_PIN_20 = 0x06;
+export const SHUTTLE_PIN_21 = 0x07;
+export const SHUTTLE_PIN_22 = 0x04;
+
+export const PIN_IN = 0;
+export const PIN_OUT = 1;
+export const PIN_LOW = 0;
+export const PIN_HIGH = 1;

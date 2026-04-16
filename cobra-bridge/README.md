@@ -27,7 +27,7 @@ npm install cobra-bridge
 
 ## Quick Start
 
-### Python
+### Python — I2C (BMM350)
 
 ```python
 from cobra_bridge.transport import SerialTransport
@@ -42,25 +42,96 @@ transport = SerialTransport(port='/dev/ttyACM0')  # Linux
 bridge = CobraBridge(transport=transport)
 bridge.connect()
 
+# init() now handles full board setup: I2C bus config, pin config,
+# power cycle, soft reset, OTP, and magnetic reset
 sensor = BMM350(bridge)
-sensor.init()
+sensor.init()  # I2C bus 0, 400K, VDD/VDDIO 1800mV
+
 data = sensor.read_mag_data(compensated=True)
 print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
 
 bridge.disconnect()
 ```
 
-### JavaScript (Browser)
+### Python — SPI (BMM350 on AppBoard3.1)
+
+```python
+from cobra_bridge.transport import SerialTransport
+from cobra_bridge.sync import CobraBridge
+from cobra_bridge.drivers.bmm350 import BMM350
+from cobra_bridge.constants import (
+    SPI_BUS_0, SPI_SPEED_5MHZ, SPI_MODE_0,
+    SHUTTLE_PIN_7, PIN_OUT, PIN_LOW,
+)
+
+transport = SerialTransport(port='/dev/ttyACM0')
+bridge = CobraBridge(transport=transport)
+bridge.connect()
+
+# SPI bus config (AppBoard3.1: bus 0, pin 7 = standard CS)
+bridge.config_spi_bus(bus=SPI_BUS_0, mode=SPI_MODE_0, speed=SPI_SPEED_5MHZ)
+bridge.set_pin(SHUTTLE_PIN_7, PIN_OUT, PIN_LOW)
+
+# Power cycle
+bridge.set_vdd(0); bridge.set_vddio(0)
+import time; time.sleep(0.1)
+bridge.set_vdd(1800); bridge.set_vddio(1800)
+time.sleep(0.1)
+
+# Read chip ID over SPI (CS line 7)
+chip_id = bridge.spi_read(cs_line=7, reg_addr=0x00, length=1,
+                          speed=SPI_SPEED_5MHZ, mode=SPI_MODE_0)
+print(f"Chip ID: 0x{chip_id[0]:02X}")  # Expected: 0x33
+
+bridge.disconnect()
+```
+
+### JavaScript (Browser) — I2C
 
 ```javascript
 import { SerialTransport, CobraBridge } from 'cobra-bridge';
+import { BMM350 } from 'cobra-bridge/drivers/bmm350.js';
 
 const transport = new SerialTransport();
 const bridge = new CobraBridge(transport);
 await bridge.connect();
 
-const chipId = await bridge.i2cRead(0x14, 0x00, 1);
-console.log(`Chip ID: 0x${chipId[0].toString(16).padStart(2, '0')}`);
+// init() handles full board setup automatically
+const sensor = new BMM350(bridge);
+await sensor.init();  // I2C bus 0, 400K, 1800mV
+
+const data = await sensor.readMagData(true);
+console.log(`X=${data.x.toFixed(2)} Y=${data.y.toFixed(2)} Z=${data.z.toFixed(2)} μT`);
+
+await bridge.disconnect();
+```
+
+### JavaScript (Browser) — SPI (AppBoard3.1)
+
+```javascript
+import { SerialTransport, CobraBridge } from 'cobra-bridge';
+import {
+    SPI_BUS_0, SPI_SPEED_5MHZ, SPI_MODE_0,
+    SHUTTLE_PIN_7, PIN_OUT, PIN_LOW,
+} from 'cobra-bridge';
+
+const transport = new SerialTransport();
+const bridge = new CobraBridge(transport);
+await bridge.connect();
+
+// SPI bus config (AppBoard3.1: bus 0, CS pin 7)
+await bridge.configSpiBus(SPI_BUS_0, SPI_MODE_0, SPI_SPEED_5MHZ);
+await bridge.setPin(SHUTTLE_PIN_7, PIN_OUT, PIN_LOW);
+
+// Power cycle
+await bridge.setVdd(0); await bridge.setVddio(0);
+await new Promise(r => setTimeout(r, 100));
+await bridge.setVdd(1800); await bridge.setVddio(1800);
+await new Promise(r => setTimeout(r, 100));
+
+// Read chip ID over SPI (CS line 7)
+const chipId = await bridge.spiRead(7, 0x00, 1, SPI_SPEED_5MHZ, SPI_MODE_0);
+console.log(`Chip ID: 0x${chipId[0].toString(16).padStart(2, '0')}`);  // 0x33
 
 await bridge.disconnect();
 ```

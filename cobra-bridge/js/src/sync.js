@@ -25,11 +25,13 @@ import {
     HEADER, TYPE_GET, TYPE_SET,
     CMD_I2C_READ, CMD_I2C_WRITE,
     CMD_SPI_READ, CMD_SPI_WRITE,
-    CMD_GET_BOARD_INFO, CMD_SET_VDD, CMD_SET_VDDIO,
+    CMD_GET_BOARD_INFO, CMD_SET_VDD, CMD_SET_VDDIO, CMD_SET_PIN,
+    CMD_CONFIG_I2C_BUS, CMD_CONFIG_SPI_BUS, CMD_INT_CONFIG,
     STATUS_OK,
-    I2C_SPEED_400K, I2C_SPEED_1M,
-    SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
+    I2C_BUS_0, I2C_BUS_1, I2C_SPEED_400K, I2C_SPEED_1M, I2C_SPEED_STANDARD, I2C_SPEED_FAST,
+    SPI_BUS_0, SPI_BUS_1, SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
     SPI_MODE_0, SPI_MODE_3,
+    PIN_IN, PIN_OUT, PIN_LOW, PIN_HIGH,
 } from './constants.js';
 
 
@@ -198,6 +200,56 @@ export class CobraBridge {
     async setVddio(voltageMv) {
         const lo = voltageMv & 0xFF, hi = (voltageMv >> 8) & 0xFF;
         const { status } = await this.transact(TYPE_SET, CMD_SET_VDDIO, new Uint8Array([lo, hi]));
+        return status;
+    }
+
+    // ── Bus Configuration ──────────────────────────────────────────────────
+
+    /**
+     * Configure the I2C bus and speed mode.
+     *
+     * Must be called before any I2C read/write operations.
+     * Mirrors coines_config_i2c_bus() from the COINES SDK.
+     *
+     * @param {number} [bus=0] - I2C bus number (0 or 1)
+     * @param {number} [speed=0] - I2C speed: 0=standard/400K, 1=fast/1M, 2=high/3.4M
+     * @returns {number} Status byte (0 = success)
+     */
+    async configI2cBus(bus = I2C_BUS_0, speed = I2C_SPEED_STANDARD) {
+        const { status } = await this.transact(TYPE_SET, CMD_CONFIG_I2C_BUS, new Uint8Array([bus, speed]));
+        return status;
+    }
+
+    /**
+     * Configure the SPI bus, mode, and speed.
+     *
+     * Must be called before any SPI read/write operations.
+     * Mirrors coines_config_spi_bus() from the COINES SDK.
+     *
+     * @param {number} [bus=0] - SPI bus number (0 or 1). Default: 0 (AppBoard3.1 standard)
+     * @param {number} [mode=0] - SPI mode (0 or 3)
+     * @param {number} [speed=0] - SPI speed: 0=5MHz, 1=10MHz
+     * @returns {number} Status byte (0 = success)
+     */
+    async configSpiBus(bus = SPI_BUS_0, mode = SPI_MODE_0, speed = SPI_SPEED_5MHZ) {
+        const { status } = await this.transact(TYPE_SET, CMD_CONFIG_SPI_BUS, new Uint8Array([bus, mode, speed]));
+        return status;
+    }
+
+    // ── Pin Configuration ───────────────────────────────────────────────────
+
+    /**
+     * Configure a shuttle board pin.
+     *
+     * Mirrors coines_set_pin_config() from the COINES SDK.
+     *
+     * @param {number} pin - Shuttle board pin number (use SHUTTLE_PIN_* constants)
+     * @param {number} [direction=1] - Pin direction: 0=IN, 1=OUT
+     * @param {number} [value=0] - Pin value: 0=LOW, 1=HIGH
+     * @returns {number} Status byte (0 = success)
+     */
+    async setPin(pin, direction = PIN_OUT, value = PIN_LOW) {
+        const { status } = await this.transact(TYPE_SET, CMD_SET_PIN, new Uint8Array([pin, direction, value]));
         return status;
     }
 }

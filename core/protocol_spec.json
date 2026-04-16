@@ -23,7 +23,9 @@
       "SET_VDD": 4,
       "SET_PIN": 5,
       "SET_VDDIO": 6,
-      "INT_CONFIG": 7
+      "INT_CONFIG": 7,
+      "CONFIG_I2C_BUS": 8,
+      "CONFIG_SPI_BUS": 9
     },
     "i2c": {
       "WRITE": 13,
@@ -35,12 +37,23 @@
     }
   },
   "i2c": {
+    "bus": {
+      "BUS_0": 0,
+      "BUS_1": 1
+    },
     "speed": {
+      "STANDARD": 0,
+      "FAST": 1,
+      "HIGH": 2,
       "400K": 0,
       "1M": 1
     }
   },
   "spi": {
+    "bus": {
+      "BUS_0": 0,
+      "BUS_1": 1
+    },
     "speed": {
       "5MHZ": 0,
       "10MHZ": 1
@@ -48,6 +61,28 @@
     "mode": {
       "MODE_0": 0,
       "MODE_3": 3
+    }
+  },
+  "shuttle_board": {
+    "pins": {
+      "SHUTTLE_PIN_7": 9,
+      "SHUTTLE_PIN_8": 5,
+      "SHUTTLE_PIN_9": 0,
+      "SHUTTLE_PIN_14": 1,
+      "SHUTTLE_PIN_15": 2,
+      "SHUTTLE_PIN_16": 3,
+      "SHUTTLE_PIN_19": 8,
+      "SHUTTLE_PIN_20": 6,
+      "SHUTTLE_PIN_21": 7,
+      "SHUTTLE_PIN_22": 4
+    },
+    "pin_direction": {
+      "IN": 0,
+      "OUT": 1
+    },
+    "pin_value": {
+      "LOW": 0,
+      "HIGH": 1
     }
   },
   "payload_formats": {
@@ -232,6 +267,77 @@
           "name": "voltage_mv",
           "type": "uint16_le",
           "description": "Voltage in millivolts (0=off)"
+        }
+      ]
+    },
+    "config_i2c_bus": {
+      "description": "Configure I2C bus and speed",
+      "fields": [
+        {
+          "offset": 0,
+          "size": 1,
+          "name": "bus",
+          "type": "uint8",
+          "description": "I2C bus number (0 or 1)"
+        },
+        {
+          "offset": 1,
+          "size": 1,
+          "name": "speed",
+          "type": "uint8",
+          "description": "I2C speed mode (0=standard/400K, 1=fast/1M, 2=high/3.4M)"
+        }
+      ]
+    },
+    "config_spi_bus": {
+      "description": "Configure SPI bus, mode, and speed",
+      "fields": [
+        {
+          "offset": 0,
+          "size": 1,
+          "name": "bus",
+          "type": "uint8",
+          "description": "SPI bus number (0 or 1)"
+        },
+        {
+          "offset": 1,
+          "size": 1,
+          "name": "mode",
+          "type": "uint8",
+          "description": "SPI mode (0 or 3)"
+        },
+        {
+          "offset": 2,
+          "size": 1,
+          "name": "speed",
+          "type": "uint8",
+          "description": "SPI speed enum (0=5MHz, 1=10MHz)"
+        }
+      ]
+    },
+    "set_pin": {
+      "description": "Configure a shuttle board pin",
+      "fields": [
+        {
+          "offset": 0,
+          "size": 1,
+          "name": "pin",
+          "type": "uint8",
+          "description": "Shuttle board pin number (see shuttle_board.pins)"
+        },
+        {
+          "offset": 1,
+          "size": 1,
+          "name": "direction",
+          "type": "uint8",
+          "description": "Pin direction (0=IN, 1=OUT)"
+        },
+        {
+          "offset": 2,
+          "size": 1,
+          "name": "value",
+          "type": "uint8",
+          "description": "Pin value (0=LOW, 1=HIGH)"
         }
       ]
     }

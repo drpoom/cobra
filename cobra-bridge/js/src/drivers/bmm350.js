@@ -25,6 +25,8 @@ import {
     BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_DATA_LEN,
     BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_AVG, BMM350_OTP_ADDR,
     BMM350_LSB_TO_UT_XY, BMM350_LSB_TO_UT_Z, BMM350_LSB_TO_DEGC, BMM350_TEMP_OFFSET,
+    I2C_BUS_0, I2C_SPEED_STANDARD,
+    SHUTTLE_PIN_7, PIN_OUT, PIN_LOW,
 } from '../constants.js';
 
 
@@ -108,27 +110,59 @@ export class BMM350 {
     // ── Initialization (mirrors Bosch bmm350_init) ────────────────────
 
     /**
-     * Full initialization sequence (mirrors official Bosch bmm350_init):
-     *   1. Soft reset
-     *   2. Read chip ID
-     *   3. OTP dump
-     *   4. Power off OTP
-     *   5. Magnetic reset (FGR + BR)
+     * Full initialization sequence with board setup.
+     *
+     * Mirrors the official Bosch COINES SDK init sequence:
+     *   1. Configure I2C bus
+     *   2. Set pin (SHUTTLE_PIN_7 as output low — standard AppBoard3.1)
+     *   3. Power cycle: VDD/VDDIO off → 100ms → on → 100ms
+     *   4. Soft reset
+     *   5. Verify chip ID
+     *   6. OTP dump
+     *   7. Power off OTP
+     *   8. Magnetic reset (suspend → BR → FGR)
+     *
+     * @param {Object} [options] - Init options
+     * @param {number} [options.bus=0] - I2C bus (0 or 1)
+     * @param {number} [options.speed=0] - I2C speed: 0=400K, 1=1M, 2=3.4M
+     * @param {number} [options.vddMv=1800] - VDD voltage in mV
+     * @param {number} [options.vddioMv=1800] - VDDIO voltage in mV
      */
-    async init() {
+    async init({ bus = I2C_BUS_0, speed = I2C_SPEED_STANDARD,
+                 vddMv = 1800, vddioMv = 1800 } = {}) {
+        // Step 1: Configure I2C bus
+        await this.bridge.configI2cBus(bus, speed);
+
+        // Step 2: Set shuttle pin 7 (standard CS/address pin for AppBoard3.1)
+        await this.bridge.setPin(SHUTTLE_PIN_7, PIN_OUT, PIN_LOW);
+
+        // Step 3: Power cycle
+        await this.bridge.setVdd(0);
+        await this.bridge.setVddio(0);
+        await this._delay(100);  // 100ms settle
+
+        await this.bridge.setVdd(vddMv);
+        await this.bridge.setVddio(vddioMv);
+        await this._delay(100);  // 100ms ramp-up
+
+        // Step 4: Soft reset
         await this.softReset();
         await this._delay(25);  // BMM350_SOFT_RESET_DELAY = 24ms
 
+        // Step 5: Verify chip ID
         const chipId = await this.getChipId();
         if (chipId !== BMM350_CHIP_ID) {
             throw new Error(`BMM350 not found. Chip ID: 0x${chipId.toString(16).padStart(2, '0')}, expected 0x33`);
         }
 
+        // Step 6: OTP dump
         await this.readOtp();
+
+        // Step 7: Power off OTP
         await this._writeReg(BMM350_REG.OTP_CMD_REG, new Uint8Array([0x80]));
         await this._delay(1);
 
-        // Magnetic reset: suspend → BR → FGR
+        // Step 8: Magnetic reset: suspend → BR → FGR
         await this.setPowerMode('suspend');
         await this._delay(30);
         await this._writeReg(BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.BR]));

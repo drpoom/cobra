@@ -48,6 +48,8 @@ from cobra_bridge.constants import (
     BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_DATA_LEN,
     BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_AVG, BMM350_OTP_ADDR,
     BMM350_LSB_TO_UT_XY, BMM350_LSB_TO_UT_Z, BMM350_LSB_TO_DEGC, BMM350_TEMP_OFFSET,
+    I2C_BUS_0, I2C_SPEED_STANDARD,
+    SHUTTLE_PIN_7, PIN_OUT, PIN_LOW,
 )
 
 
@@ -131,32 +133,59 @@ class BMM350:
 
     # ── Initialization (mirrors Bosch bmm350_init) ───────────────────────
 
-    def init(self) -> None:
+    def init(self, bus: int = I2C_BUS_0, speed: int = I2C_SPEED_STANDARD,
+             vdd_mv: int = 1800, vddio_mv: int = 1800) -> None:
         """
-        Full initialization sequence (mirrors official Bosch bmm350_init):
-          1. Soft reset
-          2. Read chip ID
-          3. OTP dump
-          4. Power off OTP
-          5. Magnetic reset (FGR + BR)
+        Full initialization sequence with board setup.
+
+        Mirrors the official Bosch COINES SDK init sequence:
+          1. Configure I2C bus
+          2. Set pin (SHUTTLE_PIN_7 as output low — standard AppBoard3.1)
+          3. Power cycle: VDD/VDDIO off → 100ms → on → 100ms
+          4. Soft reset
+          5. Verify chip ID
+          6. OTP dump
+          7. Power off OTP
+          8. Magnetic reset (suspend → BR → FGR)
+
+        Args:
+            bus: I2C bus number (0 or 1). Default: 0.
+            speed: I2C speed mode. 0=standard/400K, 1=fast/1M.
+            vdd_mv: VDD voltage in mV. Default: 1800.
+            vddio_mv: VDDIO voltage in mV. Default: 1800.
         """
-        # Soft reset
+        # Step 1: Configure I2C bus
+        self.bridge.config_i2c_bus(bus=bus, speed=speed)
+
+        # Step 2: Set shuttle pin 7 (standard CS/address pin for AppBoard3.1)
+        self.bridge.set_pin(SHUTTLE_PIN_7, PIN_OUT, PIN_LOW)
+
+        # Step 3: Power cycle
+        self.bridge.set_vdd(0)
+        self.bridge.set_vddio(0)
+        time.sleep(0.100)  # 100ms settle
+
+        self.bridge.set_vdd(vdd_mv)
+        self.bridge.set_vddio(vddio_mv)
+        time.sleep(0.100)  # 100ms ramp-up
+
+        # Step 4: Soft reset
         self.soft_reset()
         time.sleep(0.025)  # BMM350_SOFT_RESET_DELAY = 24ms
 
-        # Verify chip ID
+        # Step 5: Verify chip ID
         chip_id = self.get_chip_id()
         if chip_id != BMM350_CHIP_ID:
             raise RuntimeError(f"BMM350 not found. Chip ID: 0x{chip_id:02X}, expected 0x33")
 
-        # OTP dump
+        # Step 6: OTP dump
         self.read_otp()
 
-        # Power off OTP
+        # Step 7: Power off OTP
         self._write_reg(BMM350_REG['OTP_CMD_REG'], bytes([0x80]))
         time.sleep(0.001)
 
-        # Magnetic reset: suspend → BR → FGR → normal
+        # Step 8: Magnetic reset: suspend → BR → FGR
         self.set_power_mode('suspend')
         time.sleep(0.030)
         self._write_reg(BMM350_REG['PMU_CMD'], bytes([BMM350_PMU['BR']]))

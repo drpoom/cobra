@@ -42,11 +42,13 @@ from cobra_bridge.constants import (
     HEADER, TYPE_GET, TYPE_SET,
     CMD_I2C_READ, CMD_I2C_WRITE,
     CMD_SPI_READ, CMD_SPI_WRITE,
-    CMD_GET_BOARD_INFO, CMD_SET_VDD, CMD_SET_VDDIO,
+    CMD_GET_BOARD_INFO, CMD_SET_VDD, CMD_SET_VDDIO, CMD_SET_PIN,
+    CMD_CONFIG_I2C_BUS, CMD_CONFIG_SPI_BUS, CMD_INT_CONFIG,
     STATUS_OK,
-    I2C_SPEED_400K, I2C_SPEED_1M,
-    SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
+    I2C_BUS_0, I2C_BUS_1, I2C_SPEED_400K, I2C_SPEED_1M, I2C_SPEED_STANDARD, I2C_SPEED_FAST,
+    SPI_BUS_0, SPI_BUS_1, SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
     SPI_MODE_0, SPI_MODE_3,
+    PIN_IN, PIN_OUT, PIN_LOW, PIN_HIGH,
 )
 from cobra_bridge.transport import Transport, SerialTransport
 
@@ -250,4 +252,67 @@ class CobraBridge:
     def set_vddio(self, voltage_mv: int) -> int:
         """Set VDDIO voltage in millivolts (0 = off)."""
         status, _ = self.transact(TYPE_SET, CMD_SET_VDDIO, struct.pack('<H', voltage_mv))
+        return status
+
+    # ── Bus Configuration ──────────────────────────────────────────────────
+
+    def config_i2c_bus(self, bus: int = I2C_BUS_0,
+                       speed: int = I2C_SPEED_STANDARD) -> int:
+        """
+        Configure the I2C bus and speed mode.
+
+        Must be called before any I2C read/write operations.
+        Mirrors coines_config_i2c_bus() from the COINES SDK.
+
+        Args:
+            bus: I2C bus number (0 or 1). Default: 0.
+            speed: I2C speed mode. 0=standard (400K), 1=fast (1M), 2=high (3.4M).
+
+        Returns:
+            Status byte (0 = success).
+        """
+        payload = struct.pack('<BB', bus, speed)
+        status, _ = self.transact(TYPE_SET, CMD_CONFIG_I2C_BUS, payload)
+        return status
+
+    def config_spi_bus(self, bus: int = SPI_BUS_0,
+                       mode: int = SPI_MODE_0,
+                       speed: int = SPI_SPEED_5MHZ) -> int:
+        """
+        Configure the SPI bus, mode, and speed.
+
+        Must be called before any SPI read/write operations.
+        Mirrors coines_config_spi_bus() from the COINES SDK.
+
+        Args:
+            bus: SPI bus number (0 or 1). Default: 0 (AppBoard3.1 standard).
+            mode: SPI mode (0 or 3). Default: 0.
+            speed: SPI speed enum. 0=5MHz, 1=10MHz.
+
+        Returns:
+            Status byte (0 = success).
+        """
+        payload = struct.pack('<BBB', bus, mode, speed)
+        status, _ = self.transact(TYPE_SET, CMD_CONFIG_SPI_BUS, payload)
+        return status
+
+    # ── Pin Configuration ──────────────────────────────────────────────────
+
+    def set_pin(self, pin: int, direction: int = PIN_OUT,
+                value: int = PIN_LOW) -> int:
+        """
+        Configure a shuttle board pin.
+
+        Mirrors coines_set_pin_config() from the COINES SDK.
+
+        Args:
+            pin: Shuttle board pin number (use SHUTTLE_PIN_* constants).
+            direction: PIN_IN (0) or PIN_OUT (1). Default: PIN_OUT.
+            value: PIN_LOW (0) or PIN_HIGH (1). Default: PIN_LOW.
+
+        Returns:
+            Status byte (0 = success).
+        """
+        payload = struct.pack('<BBB', pin, direction, value)
+        status, _ = self.transact(TYPE_SET, CMD_SET_PIN, payload)
         return status
