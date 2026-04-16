@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COBRA — BMM350 Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'SF Mono', 'Cascadia Code', monospace; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+
+        header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 1.5rem; border-bottom: 2px solid #0f3460; }
+        h1 { font-size: 1.8rem; color: #e94560; }
+        h1 span { color: #888; font-size: 1rem; font-weight: normal; }
+        .subtitle { color: #666; font-size: 0.85rem; margin-top: 0.25rem; }
+
+        main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+
+        .card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .card h2 { color: #e94560; font-size: 1.1rem; margin-bottom: 1rem; }
+
+        .connect-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        button { background: #e94560; color: #fff; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-family: inherit; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; }
+        button:hover { background: #ff6b81; transform: translateY(-1px); }
+        button:disabled { background: #333; cursor: not-allowed; transform: none; }
+        button.secondary { background: #1a1a2e; border: 1px solid #333; }
+        button.secondary:hover { background: #16213e; }
+
+        .status-led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #333; margin-right: 8px; vertical-align: middle; }
+        .status-led.on { background: #44ff44; box-shadow: 0 0 8px #44ff44; }
+        .status-led.err { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .info-item { display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; background: #0a0a0a; border-radius: 6px; }
+        .info-label { color: #888; }
+        .info-value { color: #44ff44; font-weight: bold; }
+
+        .mag-display { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; text-align: center; }
+        .axis-card { background: #0a0a0a; border-radius: 8px; padding: 1rem; }
+        .axis-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+        .axis-value { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
+        .axis-unit { font-size: 0.75rem; color: #666; }
+        .axis-x .axis-value { color: #ff6b6b; }
+        .axis-y .axis-value { color: #51cf66; }
+        .axis-z .axis-value { color: #339af0; }
+
+        .controls { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+        select { background: #1a1a2e; color: #e0e0e0; border: 1px solid #333; padding: 0.5rem; border-radius: 6px; font-family: inherit; }
+
+        .log { background: #050505; border: 1px solid #222; border-radius: 8px; padding: 1rem; max-height: 200px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; }
+        .log-entry { color: #888; }
+        .log-entry.ok { color: #44ff44; }
+        .log-entry.err { color: #ff4444; }
+        .log-entry.info { color: #339af0; }
+
+        .sample-counter { text-align: center; color: #666; font-size: 0.85rem; margin-top: 0.5rem; }
+
+        @media (max-width: 600px) {
+            .mag-display { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+            .axis-value { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🐍 COBRA <span>BMM350 Dashboard</span></h1>
+        <div class="subtitle">COines BRidge Access — WebSerial</div>
+    </header>
+
+    <main>
+        <!-- Connection Card -->
+        <div class="card">
+            <h2>🔌 Connection</h2>
+            <div class="connect-row">
+                <button id="btn-connect" onclick="handleConnect()">Connect AppBoard</button>
+                <button id="btn-disconnect" onclick="handleDisconnect()" disabled class="secondary">Disconnect</button>
+                <span><span class="status-led" id="led-status"></span><span id="status-text">Not connected</span></span>
+            </div>
+        </div>
+
+        <!-- Board Info Card -->
+        <div class="card" id="card-info" style="display:none">
+            <h2>📋 Board Info</h2>
+            <div class="info-grid" id="info-grid"></div>
+        </div>
+
+        <!-- Sensor Card -->
+        <div class="card" id="card-sensor" style="display:none">
+            <h2>🧲 BMM350 Magnetometer</h2>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Chip ID</span><span class="info-value" id="chip-id">—</span></div>
+                <div class="info-item"><span class="info-label">Power Mode</span><span class="info-value" id="power-mode">—</span></div>
+            </div>
+            <div class="controls">
+                <button id="btn-monitor" onclick="toggleMonitor()">Start Monitor</button>
+                <select id="sel-odr">
+                    <option value="25">25 Hz</option>
+                    <option value="50">50 Hz</option>
+                    <option value="100" selected>100 Hz</option>
+                    <option value="200">200 Hz</option>
+                    <option value="400">400 Hz</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Live Data Card -->
+        <div class="card" id="card-data" style="display:none">
+            <h2>📊 Live Data</h2>
+            <div class="mag-display">
+                <div class="axis-card axis-x">
+                    <div class="axis-label">X-Axis</div>
+                    <div class="axis-value" id="val-x">0.00</div>
+                    <div class="axis-unit">μT</div>
+                </div>
+                <div class="axis-card axis-y">
+                    <div class="axis-label">Y-Axis</div>
+                    <div class="axis-value" id="val-y">0.00</div>
+                    <div class="axis-unit">μT</div>
+                </div>
+                <div class="axis-card axis-z">
+                    <div class="axis-label">Z-Axis</div>
+                    <div class="axis-value" id="val-z">0.00</div>
+                    <div class="axis-unit">μT</div>
+                </div>
+            </div>
+            <div class="sample-counter">Samples: <span id="sample-count">0</span></div>
+        </div>
+
+        <!-- Log Card -->
+        <div class="card">
+            <h2>📝 Log</h2>
+            <div class="log" id="log"></div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { CobraBridge } from './cobra_core.js';
+        import { BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_SENSITIVITY } from './cobra_constants.js';
+
+        let bridge = null;
+        let monitoring = false;
+        let sampleCount = 0;
+
+        function log(msg, type = '') {
+            const el = document.getElementById('log');
+            const ts = new Date().toLocaleTimeString();
+            el.innerHTML += `<div class="log-entry ${type}">[${ts}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setStatus(text, state = '') {
+            document.getElementById('status-text').textContent = text;
+            const led = document.getElementById('led-status');
+            led.className = 'status-led' + (state ? ' ' + state : '');
+        }
+
+        window.handleConnect = async () => {
+            try {
+                bridge = new CobraBridge();
+                await bridge.connect();
+                setStatus('Connected', 'on');
+                document.getElementById('btn-connect').disabled = true;
+                document.getElementById('btn-disconnect').disabled = false;
+                log('Connected to AppBoard', 'ok');
+
+                // Read board info
+                try {
+                    const info = await bridge.getBoardInfo();
+                    document.getElementById('card-info').style.display = '';
+                    const grid = document.getElementById('info-grid');
+                    grid.innerHTML = `<div class="info-item"><span class="info-label">Board ID</span><span class="info-value">0x${info.boardId.toString(16).padStart(4, '0')}</span></div>`;
+                    log('Board info retrieved', 'ok');
+                } catch (e) {
+                    log('Board info unavailable: ' + e.message, 'err');
+                }
+
+                // Read chip ID
+                document.getElementById('card-sensor').style.display = '';
+                const chipIdData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.CHIP_ID, 1);
+                const chipId = chipIdData[0];
+                document.getElementById('chip-id').textContent = `0x${chipId.toString(16).padStart(2, '0')}`;
+
+                if (chipId === BMM350_CHIP_ID) {
+                    log(`BMM350 Chip ID: 0x${chipId.toString(16).padStart(2, '0')} ✓`, 'ok');
+                } else {
+                    log(`Chip ID: 0x${chipId.toString(16).padStart(2, '0')} — expected 0x33`, 'err');
+                }
+
+                // Read power mode
+                const pmuData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.PMU_STATUS, 1);
+                const pmuMode = pmuData[0] & 0x0F;
+                const modeNames = { 1: 'Suspend', 2: 'Normal', 3: 'Forced', 4: 'Continuous' };
+                document.getElementById('power-mode').textContent = modeNames[pmuMode] || `Unknown(0x${pmuMode.toString(16)})`;
+
+            } catch (e) {
+                log('Connection failed: ' + e.message, 'err');
+                setStatus('Error', 'err');
+                bridge = null;
+            }
+        };
+
+        window.handleDisconnect = async () => {
+            monitoring = false;
+            if (bridge) {
+                try {
+                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.SUSPEND]));
+                } catch {}
+                await bridge.disconnect();
+            }
+            bridge = null;
+            setStatus('Disconnected');
+            document.getElementById('btn-connect').disabled = false;
+            document.getElementById('btn-disconnect').disabled = true;
+            document.getElementById('btn-monitor').textContent = 'Start Monitor';
+            document.getElementById('card-info').style.display = 'none';
+            document.getElementById('card-sensor').style.display = 'none';
+            document.getElementById('card-data').style.display = 'none';
+            sampleCount = 0;
+            log('Disconnected', 'info');
+        };
+
+        window.toggleMonitor = async () => {
+            if (!bridge) return;
+            const btn = document.getElementById('btn-monitor');
+
+            if (!monitoring) {
+                // Start monitoring
+                const odr = parseInt(document.getElementById('sel-odr').value);
+                const odrVal = BMM350_ODR[odr] ?? BMM350_ODR[100];
+
+                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.CONTINUOUS]));
+
+                // Set ODR
+                const curOdr = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS, 1);
+                const newOdr = (curOdr[0] & 0x8F) | ((odrVal & 0x07) << 4);
+                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS, new Uint8Array([newOdr]));
+
+                monitoring = true;
+                sampleCount = 0;
+                btn.textContent = 'Stop Monitor';
+                document.getElementById('card-data').style.display = '';
+                log(`Monitoring started @ ${odr} Hz`, 'info');
+
+                // Read loop
+                while (monitoring) {
+                    try {
+                        const statusData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.STATUS, 1);
+                        if (statusData[0] & 0x01) {
+                            const rawData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.DATA_X_LSB, 6);
+                            const view = new DataView(rawData.buffer, rawData.byteOffset, 6);
+                            const x = view.getInt16(0, true) * BMM350_SENSITIVITY;
+                            const y = view.getInt16(2, true) * BMM350_SENSITIVITY;
+                            const z = view.getInt16(4, true) * BMM350_SENSITIVITY;
+
+                            document.getElementById('val-x').textContent = x.toFixed(2);
+                            document.getElementById('val-y').textContent = y.toFixed(2);
+                            document.getElementById('val-z').textContent = z.toFixed(2);
+                            sampleCount++;
+                            document.getElementById('sample-count').textContent = sampleCount;
+                        }
+                    } catch (e) {
+                        log('Read error: ' + e.message, 'err');
+                    }
+                    await new Promise(r => setTimeout(r, 5));
+                }
+            } else {
+                // Stop
+                monitoring = false;
+                btn.textContent = 'Start Monitor';
+                try {
+                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD, new Uint8Array([BMM350_PMU.SUSPEND]));
+                } catch {}
+                log(`Monitoring stopped (${sampleCount} samples)`, 'info');
+            }
+        };
+    </script>
+</body>
+</html>

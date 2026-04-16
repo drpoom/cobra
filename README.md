@@ -1,108 +1,89 @@
 # COBRA: COines BRidge Access
 
-Pure Python implementation of the Bosch COINES V3 Bridge Protocol for the Application Board 3.1, enabling sensor testing on Android/Termux and embedded systems.
+Pure Python & JavaScript implementation of the Bosch COINES V3 Bridge Protocol for the Application Board 3.1.
 
-## Features (V1)
+## Project Structure
 
-- 🔌 USB-Serial connectivity via pyserial
-- 📦 Binary COINES V3 packet framing with XOR checksums
-- 📡 I2C Read/Write commands
-- 📡 SPI Read/Write commands
-- 🧲 BMM350 magnetometer driver (Chip ID, power modes, data readout)
-- 🖥️ CLI test tool with auto-detection
+```
+drpoom/cobra/
+├── core/               # Language-agnostic protocol specification
+│   └── PROTOCOL.md     # COINES V3 packet format, commands, payloads
+├── python/             # COBRA Python library (V1/V2/PRO)
+│   ├── cobra_constants.py  # Shared command constants
+│   ├── cobra_core.py      # CobraBridge — protocol over pyserial
+│   ├── bmm350.py           # BMM350 magnetometer driver
+│   └── bmm350_test.py      # CLI test tool
+├── javascript/         # COBRA.js (V4 — WebSerial)
+│   ├── cobra_constants.js  # Shared command constants
+│   ├── cobra_core.js       # CobraBridge — protocol over WebSerial
+│   └── index.html          # One-page BMM350 dashboard
+├── project_spec.md     # Technical specification & roadmap
+└── LICENSE             # MIT
+```
 
-## Quick Start
+## Design Philosophy
+
+The COBRA core logic is **language-agnostic**. The packet-building algorithm is documented in `core/PROTOCOL.md` so that any implementation (Python, JavaScript, future Rust/Go) shares the same command constants and binary framing. All implementations MUST follow `core/PROTOCOL.md` exactly.
+
+## Quick Start — Python (V1)
 
 ```bash
 pip install pyserial
+cd python
 
 # Auto-detect AppBoard and read Chip ID
-python cobra_test.py
+python bmm350_test.py
 
-# Specify port manually
-python cobra_test.py /dev/ttyACM0
+# Specify port
+python bmm350_test.py /dev/ttyACM0
 
-# Show board info
-python cobra_test.py --info
-
-# Continuous magnetic field monitoring
-python cobra_test.py --monitor
-
-# Monitor at 200 Hz
-python cobra_test.py --monitor --odr 200
+# Continuous monitoring at 200 Hz
+python bmm350_test.py --monitor --odr 200
 ```
 
-## Termux (Android)
+### Termux (Android)
 
 ```bash
-pkg install python
-pip install pyserial
-termux-usb -l                              # List USB devices
-termux-usb -r -e python cobra_test.py /dev/bus/usb/001/002
+pkg install python && pip install pyserial
+termux-usb -l
+termux-usb -r -e python bmm350_test.py /dev/bus/usb/001/002
 ```
 
-## Library Usage
+### Python Library Usage
 
 ```python
 from cobra_core import CobraBridge
-from bmm350 import BMM350
+from bmm350 import BMM350, ODR_100HZ
 
-# Connect to AppBoard
 bridge = CobraBridge(port='/dev/ttyACM0')
 bridge.connect()
 
-# Read BMM350 Chip ID
 sensor = BMM350(bridge)
-chip_id = sensor.get_chip_id()      # Expected: 0x33
-print(f"Chip ID: 0x{chip_id:02X}")
+print(f"Chip ID: 0x{sensor.get_chip_id():02X}")  # 0x33
 
-# Configure and read data
 sensor.set_power_mode('continuous')
 sensor.set_odr(ODR_100HZ)
 
 if sensor.is_data_ready():
     data = sensor.read_mag_data()
-    print(f"Magnetic field: X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
+    print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
 
-# Cleanup
 sensor.set_power_mode('suspend')
 bridge.disconnect()
 ```
 
-## COINES V3 Packet Structure
+## Quick Start — JavaScript (V4)
 
-| Byte | Field      | Value / Description                    |
-|------|------------|----------------------------------------|
-| 0    | Header     | 0xAA                                   |
-| 1    | Type       | 0x01 (Get), 0x02 (Set)                |
-| 2    | Command ID | e.g., 0x0E (I2C Read), 0x0D (I2C Write) |
-| 3-4  | Length     | Payload length (Little Endian)         |
-| 5..N | Payload    | Raw I2C/SPI command data               |
-| N+1  | Checksum   | XOR sum of bytes 0 through N           |
-
-## BMM350 Configuration (V1 Test)
-
-- I2C Address: 0x14
-- Chip ID Register: 0x00 (Expected: 0x33)
-- Power Modes: suspend, normal, forced, continuous
-- ODR: 6.25, 12.5, 25, 50, 100, 200, 400 Hz
-
-## Project Structure
-
-```
-cobra/
-├── cobra_core.py    # COINES V3 protocol layer (CobraBridge class)
-├── bmm350.py        # BMM350 magnetometer driver
-├── cobra_test.py    # CLI test tool
-├── project_spec.md   # Technical specification
-└── README.md        # This file
-```
+Open `javascript/index.html` in Chrome/Edge (WebSerial required). Click **Connect AppBoard**, then **Start Monitor**.
 
 ## Roadmap
 
-- **V1** — Synchronous polling, I2C/SPI, basic BMM350 driver ✓
-- **V2** — Async I/O, higher ODR, CSV/JSON logging
-- **PRO** — Binary streaming, hardware interrupts, sensor fusion
+| Version | Mode | Features |
+|---------|------|----------|
+| V1 ✓    | Sync polling | I2C/SPI, BMM350 driver, CLI |
+| V2      | Async I/O | Threaded reads, 400Hz, CSV/JSON logging |
+| V3 (PRO)| Streaming | Binary streaming @ 6.4kHz, μs timestamps, sensor fusion |
+| V4 ✓    | WebSerial | Browser dashboard, real-time plotting |
 
 ## License
 
