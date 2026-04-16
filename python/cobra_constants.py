@@ -68,20 +68,38 @@ _bmm350 = _SPEC['sensors']['bmm350']
 
 BMM350_I2C_ADDR    = _bmm350['i2c_addr']              # 0x14 = 20
 BMM350_CHIP_ID     = _bmm350['chip_id']               # 0x33 = 51
-BMM350_SENSITIVITY = _bmm350['sensitivity_ut_per_lsb'] # 1/6
+BMM350_SENSITIVITY = _bmm350['sensitivity_ut_per_lsb'] # 1/6 (legacy, prefer conversion coefficients)
+BMM350_DATA_LEN    = _bmm350['data_length_bytes']       # 12 bytes (24-bit × 4 channels)
 
 # BMM350 Register addresses
 BMM350_REG = {name: entry['address'] for name, entry in _bmm350['registers'].items()}
 
-# BMM350 PMU commands
+# BMM350 PMU commands (official Bosch register values)
 BMM350_PMU = {name: val for name, val in _bmm350['pmu_commands'].items()}
 
 # BMM350 PMU status values
 BMM350_PMU_STATUS = {name: val for name, val in _bmm350['pmu_status'].items()}
 
-# BMM350 ODR settings
+# BMM350 ODR settings (register values for PMU_CMD_AGGR_SET)
 BMM350_ODR = {name: val for name, val in _bmm350['odr'].items()}
+
+# BMM350 Averaging settings
+BMM350_AVG = {name: val for name, val in _bmm350['averaging'].items()}
+
+# BMM350 OTP addresses
+BMM350_OTP_ADDR = {name: val for name, val in _bmm350['otp_addresses'].items()}
+
+# BMM350 default conversion coefficients (from official Bosch BMM350_SensorAPI v1.10.0)
+_conv = _bmm350['conversion']
+BMM350_LSB_TO_UT_XY = _conv['lsb_to_ut_xy']   # 0.007069979 μT/LSB for X,Y
+BMM350_LSB_TO_UT_Z  = _conv['lsb_to_ut_z']    # 0.007174964 μT/LSB for Z
+BMM350_LSB_TO_DEGC  = _conv['lsb_to_degc']    # 0.000981282 °C/LSB
+BMM350_TEMP_OFFSET   = _conv['temp_offset_degc']  # 25.49 °C
 
 # Convenience: flat ODR constants for Python (e.g. ODR_100HZ)
 for _name, _val in _bmm350['odr'].items():
     globals()[f'ODR_{_name}'] = _val
+
+# Convenience: flat AVG constants
+for _name, _val in _bmm350['averaging'].items():
+    globals()[f'AVG_{_name}'] = _val

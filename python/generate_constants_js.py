@@ -90,7 +90,7 @@ def generate():
     lines.append('')
     lines.append(f"export const BMM350_I2C_ADDR = {hex_val(bmm['i2c_addr'])};")
     lines.append(f"export const BMM350_CHIP_ID = {hex_val(bmm['chip_id'])};")
-    lines.append(f"export const BMM350_SENSITIVITY = 1 / 6; // μT per LSB")
+    lines.append(f"export const BMM350_DATA_LEN = {bmm['data_length_bytes']}; // bytes per sample (24-bit × 4 channels)")
     lines.append('')
 
     # BMM350 Registers
@@ -98,7 +98,7 @@ def generate():
     reg_items = list(bmm['registers'].items())
     for i, (name, entry) in enumerate(reg_items):
         comma = ',' if i < len(reg_items) - 1 else ','
-        lines.append(f"    {name}: {hex_val(entry['address'])}{comma}")
+        lines.append(f"    {name}: {hex_val(entry['address'])}{comma}  // {entry['description']}")
     lines.append('};')
     lines.append('')
 
@@ -111,23 +111,50 @@ def generate():
     lines.append('};')
     lines.append('')
 
-    # BMM350 ODR — use human Hz as keys (bracket access: BMM350_ODR[400])
-    lines.append('// ODR map: human Hz → register value  (bracket access: BMM350_ODR[400])')
+    # BMM350 ODR
+    lines.append('// ODR map: human Hz → register value')
     lines.append('export const BMM350_ODR = {')
-    # Convert keys like '400_HZ' → 400, '12_5_HZ' → '12.5', '6_25_HZ' → '6.25'
     odr_display = {}
     for name, val in bmm['odr'].items():
         hz = name.replace('_HZ', '').replace('_', '.')
         try:
             hz = int(hz)
         except ValueError:
-            hz = f"'{hz}'"  # Quote non-integer keys like '12.5'
+            hz = f"'{hz}'"
         odr_display[hz] = val
     odr_items = list(odr_display.items())
     for i, (hz, val) in enumerate(odr_items):
         comma = ',' if i < len(odr_items) - 1 else ','
         lines.append(f"    {hz}: {hex_val(val)}{comma}")
     lines.append('};')
+    lines.append('')
+
+    # BMM350 Averaging
+    lines.append('export const BMM350_AVG = {')
+    avg_items = list(bmm['averaging'].items())
+    for i, (name, val) in enumerate(avg_items):
+        comma = ',' if i < len(avg_items) - 1 else ','
+        lines.append(f"    {name}: {val}{comma}")
+    lines.append('};')
+    lines.append('')
+
+    # BMM350 OTP Addresses
+    lines.append('export const BMM350_OTP_ADDR = {')
+    otp_items = list(bmm['otp_addresses'].items())
+    for i, (name, val) in enumerate(otp_items):
+        comma = ',' if i < len(otp_items) - 1 else ','
+        lines.append(f"    {name}: {val}{comma}")
+    lines.append('};')
+    lines.append('')
+
+    # BMM350 Conversion Coefficients
+    conv = bmm['conversion']
+    lines.append('// ── BMM350 Conversion Coefficients (Bosch BMM350_SensorAPI v1.10.0) ────')
+    lines.append('')
+    lines.append(f"export const BMM350_LSB_TO_UT_XY = {conv['lsb_to_ut_xy']};  // μT/LSB for X,Y axes")
+    lines.append(f"export const BMM350_LSB_TO_UT_Z = {conv['lsb_to_ut_z']};   // μT/LSB for Z axis")
+    lines.append(f"export const BMM350_LSB_TO_DEGC = {conv['lsb_to_degc']};  // °C/LSB for temperature")
+    lines.append(f"export const BMM350_TEMP_OFFSET = {conv['temp_offset_degc']};  // °C offset")
 
     output = '\n'.join(lines) + '\n'
 

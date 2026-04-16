@@ -17,7 +17,6 @@
                background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh;
                overflow-x: hidden; }
 
-        /* Header */
         header { background: linear-gradient(135deg, #1a1a2e, #16213e);
                  padding: 1rem 1.25rem; border-bottom: 2px solid #0f3460;
                  position: sticky; top: 0; z-index: 10; }
@@ -28,12 +27,10 @@
 
         main { max-width: 600px; margin: 0 auto; padding: 1rem; }
 
-        /* Cards */
         .card { background: var(--card); border: 1px solid var(--border);
                 border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
         .card h2 { color: var(--accent); font-size: 0.95rem; margin-bottom: 0.75rem; }
 
-        /* Buttons */
         button { background: var(--accent); color: #fff; border: none;
                  padding: 0.65rem 1.25rem; border-radius: 8px;
                  font-family: inherit; font-size: 0.9rem; cursor: pointer;
@@ -42,27 +39,23 @@
         button:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
         button.secondary { background: #1a1a2e; border: 1px solid var(--border); color: var(--text); }
 
-        /* Status */
         .led { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
                background: #333; margin-right: 6px; vertical-align: middle; }
         .led.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
         .led.err { background: var(--red); box-shadow: 0 0 6px var(--red); }
         #status-text { font-size: 0.85rem; color: var(--muted); }
 
-        /* Info grid */
         .info-row { display: flex; justify-content: space-between; padding: 0.4rem 0;
                     border-bottom: 1px solid #1a1a1a; font-size: 0.85rem; }
         .info-row:last-child { border-bottom: none; }
         .info-label { color: var(--muted); }
         .info-value { color: var(--green); font-weight: 700; }
 
-        /* Compass */
         .compass { width: 200px; height: 200px; margin: 1rem auto; position: relative; }
         .compass canvas { width: 100%; height: 100%; }
         .compass-heading { position: absolute; bottom: -1.5rem; left: 50%; transform: translateX(-50%);
                            font-size: 1.8rem; font-weight: 900; color: var(--accent); }
 
-        /* Mag axes */
         .axes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center; }
         .axis { background: var(--bg); border-radius: 8px; padding: 0.75rem 0.25rem; }
         .axis-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
@@ -74,16 +67,20 @@
         .y .axis-val { color: #51cf66; }
         .z .axis-val { color: var(--blue); }
 
-        /* Controls */
+        .temp-display { text-align: center; margin-top: 0.75rem; font-size: 0.9rem; }
+        .temp-val { color: #ffa94d; font-weight: 700; font-size: 1.2rem; }
+
         .controls { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
         .controls button { width: auto; flex: 1; min-width: 0; }
         select { background: #1a1a2e; color: var(--text); border: 1px solid var(--border);
                  padding: 0.5rem; border-radius: 8px; font-family: inherit; font-size: 0.85rem; }
 
-        /* Sample counter */
         .counter { text-align: center; color: var(--dim); font-size: 0.8rem; margin-top: 0.5rem; }
 
-        /* Log */
+        .toggle-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;
+                      font-size: 0.85rem; color: var(--muted); }
+        .toggle-row input[type="checkbox"] { accent-color: var(--accent); }
+
         .log { background: #050505; border: 1px solid var(--border); border-radius: 8px;
                padding: 0.75rem; max-height: 140px; overflow-y: auto; font-size: 0.75rem;
                line-height: 1.5; -webkit-overflow-scrolling: touch; }
@@ -92,7 +89,6 @@
         .log-entry.err { color: var(--red); }
         .log-entry.info { color: var(--blue); }
 
-        /* Hidden sections */
         .hidden { display: none !important; }
 
         @media (max-width: 360px) {
@@ -103,8 +99,8 @@
 </head>
 <body>
     <header>
-        <h1>🐍 COBRA <span class="tag">V4</span></h1>
-        <div class="subtitle">BMM350 Magnetometer — WebSerial</div>
+        <h1>🐍 COBRA <span class="tag">V4.1</span></h1>
+        <div class="subtitle">BMM350 Magnetometer — Bosch SensorAPI v1.10.0</div>
     </header>
 
     <main>
@@ -134,6 +130,10 @@
                 <span class="info-label">Power Mode</span>
                 <span class="info-value" id="power-mode">—</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">OTP</span>
+                <span class="info-value" id="otp-status">—</span>
+            </div>
             <div class="controls">
                 <button id="btn-monitor" onclick="toggleMonitor()">▶ Start</button>
                 <select id="sel-odr">
@@ -143,6 +143,10 @@
                     <option value="200">200 Hz</option>
                     <option value="400">400 Hz</option>
                 </select>
+            </div>
+            <div class="toggle-row">
+                <input type="checkbox" id="chk-compensated">
+                <label for="chk-compensated">OTP Compensation</label>
             </div>
         </div>
 
@@ -170,6 +174,9 @@
                     <div class="axis-unit">μT</div>
                 </div>
             </div>
+            <div class="temp-display">
+                🌡️ <span class="temp-val" id="val-temp">—</span> °C
+            </div>
             <div class="counter">
                 Samples: <span id="sample-count">0</span>
                 &nbsp;·&nbsp;
@@ -186,14 +193,12 @@
 
     <script type="module">
         import { CobraBridge } from './cobra_core.js';
-        import {
-            BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_SENSITIVITY,
-            BMM350_REG, BMM350_PMU, BMM350_ODR, STATUS_OK,
-        } from './cobra_constants.js';
+        import { BMM350 } from './bmm350.js';
+        import { BMM350_CHIP_ID, BMM350_PMU, BMM350_ODR } from './cobra_constants.js';
 
         let bridge = null;
+        let sensor = null;
         let monitoring = false;
-        let monitorRAF = null;
         let sampleCount = 0;
         let startTime = 0;
 
@@ -225,14 +230,12 @@
 
             ctx.clearRect(0, 0, w, h);
 
-            // Outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Tick marks
             for (let i = 0; i < 36; i++) {
                 const a = (i * 10) * Math.PI / 180;
                 const len = i % 9 === 0 ? 12 : 4;
@@ -248,7 +251,6 @@
                 ctx.stroke();
             }
 
-            // Cardinal labels
             ctx.fillStyle = '#666';
             ctx.font = '10px monospace';
             ctx.textAlign = 'center';
@@ -257,15 +259,13 @@
             ctx.fillText('E', cx + r - 16, cy + 4);
             ctx.fillText('W', cx - r + 16, cy + 4);
 
-            // Needle
-            const heading = Math.atan2(y, x); // East = 0°
+            const heading = Math.atan2(y, x);
             const needleLen = r - 20;
 
             ctx.save();
             ctx.translate(cx, cy);
-            ctx.rotate(heading - Math.PI / 2); // Adjust so N = up
+            ctx.rotate(heading - Math.PI / 2);
 
-            // North half (red)
             ctx.beginPath();
             ctx.moveTo(0, -needleLen);
             ctx.lineTo(-5, 0);
@@ -274,7 +274,6 @@
             ctx.fillStyle = '#e94560';
             ctx.fill();
 
-            // South half (gray)
             ctx.beginPath();
             ctx.moveTo(0, needleLen * 0.4);
             ctx.lineTo(-4, 0);
@@ -285,7 +284,6 @@
 
             ctx.restore();
 
-            // Center dot
             ctx.beginPath();
             ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#e94560';
@@ -303,27 +301,22 @@
                 document.getElementById('btn-connect').disabled = true;
                 log('WebSerial connected', 'ok');
 
-                // Board info
+                // Create sensor instance
+                sensor = new BMM350(bridge);
+
+                // Init sensor (soft reset + OTP + magnetic reset)
                 try {
-                    const info = await bridge.getBoardInfo();
-                    show('card-info');
-                    const rows = document.getElementById('info-rows');
-                    rows.innerHTML = '';
-                    for (const [k, v] of Object.entries(info)) {
-                        if (k === 'raw') continue;
-                        const display = typeof v === 'number' ? `0x${v.toString(16).padStart(4, '0')}` : v;
-                        rows.innerHTML += `<div class="info-row"><span class="info-label">${k}</span><span class="info-value">${display}</span></div>`;
-                    }
-                    log('Board info retrieved', 'ok');
+                    await sensor.init();
+                    log('BMM350 initialized (soft reset + OTP + magnetic reset)', 'ok');
                 } catch (e) {
-                    log('Board info: ' + e.message, 'err');
+                    log('Init warning: ' + e.message + ' (continuing)', 'err');
                 }
 
-                // BMM350 chip ID
+                // Chip ID
                 show('card-sensor');
-                const chipData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.CHIP_ID, 1);
-                const chipId = chipData[0];
-                document.getElementById('chip-id').textContent = `0x${chipId.toString(16).padStart(2, '0')}`;
+                const chipId = await sensor.getChipId();
+                document.getElementById('chip-id').textContent =
+                    `0x${chipId.toString(16).padStart(2, '0')}`;
 
                 if (chipId === BMM350_CHIP_ID) {
                     log(`BMM350 Chip ID: 0x${chipId.toString(16).padStart(2, '0')} ✓`, 'ok');
@@ -332,38 +325,51 @@
                 }
 
                 // Power mode
-                const pmuData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.PMU_STATUS, 1);
-                const pmuMode = pmuData[0] & 0x0F;
-                const modeNames = { 1: 'Suspend', 2: 'Normal', 3: 'Forced', 4: 'Continuous' };
-                document.getElementById('power-mode').textContent = modeNames[pmuMode] || `0x${pmuMode.toString(16)}`;
+                const mode = await sensor.getPowerMode();
+                document.getElementById('power-mode').textContent = mode;
+
+                // OTP status
+                document.getElementById('otp-status').textContent =
+                    sensor.otpLoaded ? '✅ Loaded' : '❌ Not loaded';
+
+                // Board info
+                try {
+                    const info = await bridge.getBoardInfo();
+                    show('card-info');
+                    const rows = document.getElementById('info-rows');
+                    rows.innerHTML = '';
+                    for (const [k, v] of Object.entries(info)) {
+                        if (k === 'raw') continue;
+                        const display = typeof v === 'number'
+                            ? `0x${v.toString(16).padStart(4, '0')}` : v;
+                        rows.innerHTML += `<div class="info-row"><span class="info-label">${k}</span><span class="info-value">${display}</span></div>`;
+                    }
+                    log('Board info retrieved', 'ok');
+                } catch (e) {
+                    log('Board info: ' + e.message, 'err');
+                }
 
             } catch (e) {
                 log('Connection failed: ' + e.message, 'err');
                 setStatus('Error', 'err');
                 bridge = null;
+                sensor = null;
             }
         };
 
         // ── Monitor ─────────────────────────────────────────────────────
 
         window.toggleMonitor = async () => {
-            if (!bridge) return;
+            if (!bridge || !sensor) return;
             const btn = document.getElementById('btn-monitor');
 
             if (!monitoring) {
                 // Start
                 const odrHz = parseInt(document.getElementById('sel-odr').value);
-                const odrVal = BMM350_ODR[odrHz] ?? BMM350_ODR[100];
 
-                // Set continuous mode
-                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD,
-                    new Uint8Array([BMM350_PMU.CONTINUOUS]));
-
-                // Set ODR
-                const curOdr = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS, 1);
-                const newOdr = (curOdr[0] & 0x8F) | ((odrVal & 0x07) << 4);
-                await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.ODR_AXIS,
-                    new Uint8Array([newOdr]));
+                // Use BMM350 class API (same as Python)
+                await sensor.setPowerMode('nm');
+                await sensor.setOdr(odrHz);
 
                 monitoring = true;
                 sampleCount = 0;
@@ -371,37 +377,30 @@
                 btn.textContent = '⏹ Stop';
                 btn.style.background = '#ff4444';
                 show('card-data');
-                log(`Monitoring @ ${odrHz} Hz`, 'info');
+                log(`Monitoring @ ${odrHz} Hz (24-bit Bosch conversion)`, 'info');
 
-                // Read loop
-                const pollInterval = 1000 / (odrHz * 2); // Poll at 2x ODR
+                const pollInterval = 1000 / (odrHz * 2);
                 const readLoop = async () => {
                     if (!monitoring) return;
                     try {
-                        const statusData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.STATUS, 1);
-                        if (statusData[0] & 0x01) {
-                            const rawData = await bridge.i2cRead(BMM350_I2C_ADDR, BMM350_REG.DATA_X_LSB, 6);
-                            const view = new DataView(rawData.buffer, rawData.byteOffset, 6);
-                            const x = view.getInt16(0, true) * BMM350_SENSITIVITY;
-                            const y = view.getInt16(2, true) * BMM350_SENSITIVITY;
-                            const z = view.getInt16(4, true) * BMM350_SENSITIVITY;
+                        const compensated = document.getElementById('chk-compensated').checked;
+                        const data = await sensor.readMagData(compensated);
 
-                            document.getElementById('val-x').textContent = x.toFixed(2);
-                            document.getElementById('val-y').textContent = y.toFixed(2);
-                            document.getElementById('val-z').textContent = z.toFixed(2);
-                            sampleCount++;
+                        document.getElementById('val-x').textContent = data.x.toFixed(2);
+                        document.getElementById('val-y').textContent = data.y.toFixed(2);
+                        document.getElementById('val-z').textContent = data.z.toFixed(2);
+                        document.getElementById('val-temp').textContent = data.temperature.toFixed(1);
+                        sampleCount++;
 
-                            const elapsed = (performance.now() - startTime) / 1000;
-                            document.getElementById('sample-count').textContent = sampleCount;
-                            document.getElementById('sample-rate').textContent =
-                                (sampleCount / elapsed).toFixed(1);
+                        const elapsed = (performance.now() - startTime) / 1000;
+                        document.getElementById('sample-count').textContent = sampleCount;
+                        document.getElementById('sample-rate').textContent =
+                            (sampleCount / elapsed).toFixed(1);
 
-                            // Compass
-                            drawCompass(x, y);
-                            const heading = Math.atan2(y, x) * 180 / Math.PI;
-                            document.getElementById('heading').textContent =
-                                `${((heading + 360) % 360).toFixed(0)}°`;
-                        }
+                        drawCompass(data.x, data.y);
+                        const heading = Math.atan2(data.y, data.x) * 180 / Math.PI;
+                        document.getElementById('heading').textContent =
+                            `${((heading + 360) % 360).toFixed(0)}°`;
                     } catch (e) {
                         log('Read error: ' + e.message, 'err');
                     }
@@ -417,8 +416,7 @@
                 btn.textContent = '▶ Start';
                 btn.style.background = '';
                 try {
-                    await bridge.i2cWrite(BMM350_I2C_ADDR, BMM350_REG.PMU_CMD,
-                        new Uint8Array([BMM350_PMU.SUSPEND]));
+                    await sensor.setPowerMode('suspend');
                 } catch {}
                 log(`Stopped (${sampleCount} samples)`, 'info');
             }
@@ -426,7 +424,9 @@
 
         // ── Init ────────────────────────────────────────────────────────
 
-        drawCompass(0, 0); // Draw empty compass on load
+        drawCompass(0, 0);
+        log('COBRA V4.1 — BMM350 driver with Bosch SensorAPI v1.10.0 conversion', 'info');
+        log('24-bit data, official μT/°C coefficients, OTP compensation', 'info');
         log('Ready. Connect your Bosch AppBoard 3.1 via USB.', 'info');
     </script>
 </body>
