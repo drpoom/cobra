@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-COBRA V2 Test — Async BMM350 Monitor
+COBRA Async Test — BMM350 Monitor
 
 Non-blocking high-rate magnetometer readout using CobraReader thread.
 
 Usage:
-    python bmm350_test_v2.py                          # Auto-detect, monitor @ 100 Hz
-    python bmm350_test_v2.py /dev/ttyACM0              # Specify port
-    python bmm350_test_v2.py --odr 400                 # 400 Hz
-    python bmm350_test_v2.py --odr 400 --csv out.csv   # Log to CSV
-    python bmm350_test_v2.py --json out.json            # Log to JSON
-    python bmm350_test_v2.py --info                    # Board info only
+    python -m cobra_bridge.tests.test_async                          # Auto-detect, monitor @ 100 Hz
+    python -m cobra_bridge.tests.test_async /dev/ttyACM0              # Specify port
+    python -m cobra_bridge.tests.test_async --odr 400                 # 400 Hz
+    python -m cobra_bridge.tests.test_async --odr 400 --csv out.csv   # Log to CSV
+    python -m cobra_bridge.tests.test_async --json out.json            # Log to JSON
+    python -m cobra_bridge.tests.test_async --info                    # Board info only
 """
 
 import sys
@@ -48,7 +48,7 @@ def auto_detect_port() -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='COBRA V2 — Async BMM350 Monitor')
+    parser = argparse.ArgumentParser(description='COBRA — Async BMM350 Monitor')
     parser.add_argument('port', nargs='?', default=None, help='Serial port')
     parser.add_argument('--baud', type=int, default=115200, help='Baud rate')
     parser.add_argument('--info', action='store_true', help='Show board info')
@@ -61,7 +61,7 @@ def main():
                         help='Print stats every N seconds (default 5)')
     args = parser.parse_args()
 
-    print("\n🐍 COBRA V2 — Async COines BRidge Access")
+    print("\n🐍 COBRA — Async COines BRidge Access v0.1.0")
     print("━" * 42)
 
     port = args.port
@@ -69,7 +69,7 @@ def main():
         print("  Auto-detecting AppBoard...")
         port = auto_detect_port()
         if not port:
-            print("  ✗ No AppBoard found. Try: python bmm350_test_v2.py /dev/ttyACM0")
+            print("  ✗ No AppBoard found. Try: python -m cobra_bridge.tests.test_async /dev/ttyACM0")
             sys.exit(1)
 
     print(f"  Port: {port} @ {args.baud} baud")
@@ -80,7 +80,7 @@ def main():
     bridge = AsyncBridge(port=port, baudrate=args.baud, max_queue_size=64)
     try:
         bridge.connect()
-        print("  ✓ Connected (V2 async reader active)")
+        print("  ✓ Connected (async reader active)")
     except Exception as e:
         print(f"  ✗ Connection failed: {e}")
         sys.exit(1)

@@ -121,8 +121,9 @@ def generate_py(spec):
 
     # BMM350 PMU Status
     lines.append('BMM350_PMU_STATUS = {')
-    for i, (name, val) in enumerate(bmm['pmu_status'].items()):
-        comma = ',' if i < len(bmm_status := bmm['pmu_status']) and i < len(bmm_status) - 1 else ','
+    pmu_status_items = list(bmm['pmu_status'].items())
+    for i, (name, val) in enumerate(pmu_status_items):
+        comma = ',' if i < len(pmu_status_items) - 1 else ','
         lines.append(f"    '{name}': {hex_val(val)}{comma}")
     lines.append('}')
     lines.append('')
@@ -251,6 +252,15 @@ def generate_js(spec):
     pmu_items = list(bmm['pmu_commands'].items())
     for i, (name, val) in enumerate(pmu_items):
         comma = ',' if i < len(pmu_items) - 1 else ','
+        lines.append(f"    {name}: {hex_val(val)}{comma}")
+    lines.append('};')
+    lines.append('')
+
+    # BMM350 PMU Status
+    lines.append('export const BMM350_PMU_STATUS = {')
+    pmu_status_items = list(bmm['pmu_status'].items())
+    for i, (name, val) in enumerate(pmu_status_items):
+        comma = ',' if i < len(pmu_status_items) - 1 else ','
         lines.append(f"    {name}: {hex_val(val)}{comma}")
     lines.append('};')
     lines.append('')

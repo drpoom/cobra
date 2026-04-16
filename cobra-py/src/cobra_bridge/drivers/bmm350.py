@@ -4,9 +4,9 @@ COBRA Sync: BMM350 Magnetometer Driver (Python)
 Register-level driver for the Bosch BMM350 magnetometer.
 Based on official Bosch BMM350_SensorAPI v1.10.0 conversion formulas.
 All register addresses and constants come from core/protocol_spec.json
-via cobra_constants — the single source of truth.
+via cobra_bridge.constants — the single source of truth.
 
-Key changes from V1:
+Key differences from sync driver:
   - 24-bit data reads (12 bytes: 3 bytes/axis × 3 axes + 3 bytes temp)
   - Official Bosch conversion coefficients (not 1/6 simplification)
   - Temperature readout with proper °C conversion

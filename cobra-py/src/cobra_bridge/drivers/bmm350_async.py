@@ -5,7 +5,7 @@ High-rate sensor driver (up to 400 Hz) that uses the AsyncBridge
 with background reader thread. Updated with official Bosch BMM350_SensorAPI
 v1.10.0 conversion formulas (24-bit data, proper μT/°C coefficients, OTP compensation).
 
-Key changes from V1:
+Key differences from sync driver:
   - 24-bit data reads (12 bytes: 3 bytes/axis × 3 axes + 3 bytes temp)
   - Official Bosch conversion coefficients (not 1/6 simplification)
   - Temperature readout with proper °C conversion

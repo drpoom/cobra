@@ -79,6 +79,13 @@ export const BMM350_PMU = {
     SOFT_RESET: 0xB6,
 };
 
+export const BMM350_PMU_STATUS = {
+    SUSPEND: 0x00,
+    NORMAL: 0x01,
+    FORCED: 0x02,
+    CONTINUOUS: 0x03,
+};
+
 // ODR map: human Hz → register value
 export const BMM350_ODR = {
     400: 0x02,

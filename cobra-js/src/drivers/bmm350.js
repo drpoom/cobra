@@ -1,5 +1,5 @@
 /**
- * COBRA: BMM350 Magnetometer Driver (JavaScript/WebSerial)
+ * COBRA: BMM350 Magnetometer Driver (JavaScript)
  *
  * Register-level driver for the Bosch BMM350 magnetometer.
  * Based on official Bosch BMM350_SensorAPI v1.10.0 conversion formulas.

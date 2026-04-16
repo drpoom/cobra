@@ -1,5 +1,5 @@
 """
-COBRA V2: CobraReader — Background Serial Reader Thread
+COBRA: CobraReader — Background Serial Reader Thread
 
 Continuously monitors the serial port for incoming COINES V3 packets,
 verifies checksums, and places decoded payloads into a thread-safe queue.

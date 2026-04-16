@@ -65,7 +65,7 @@ from cobra_bridge.constants import (
 
 class AsyncBridge:
     """
-    V2 Async Bridge: CobraBridge (send) + CobraReader (receive).
+    Async Bridge: CobraBridge (send) + CobraReader (receive).
 
     The reader thread continuously drains the transport and places
     decoded packets into a thread-safe queue. Main thread sends
@@ -179,7 +179,7 @@ class AsyncBridge:
         _, _, status, resp_data = self.receive_packet(timeout=timeout)
         return status, resp_data
 
-    # ── I2C Operations (same API as V1) ──────────────────────────────────
+    # ── I2C Operations (same API as sync) ──────────────────────────────────
 
     def i2c_write(self, dev_addr: int, reg_addr: int, data: bytes,
                   speed: int = I2C_SPEED_400K) -> int:

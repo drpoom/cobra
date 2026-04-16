@@ -3,11 +3,11 @@
 COBRA Test — BMM350 Chip ID Reader & Monitor
 
 Usage:
-    python bmm350_test.py                          # Auto-detect port
-    python bmm350_test.py /dev/ttyACM0              # Specify port
-    python bmm350_test.py --info                    # Board info
-    python bmm350_test.py --monitor                 # Continuous readout
-    python bmm350_test.py --monitor --odr 200       # Monitor at 200 Hz
+    python -m cobra_bridge.tests.test_sync                          # Auto-detect port
+    python -m cobra_bridge.tests.test_sync /dev/ttyACM0              # Specify port
+    python -m cobra_bridge.tests.test_sync --info                    # Board info
+    python -m cobra_bridge.tests.test_sync --monitor                 # Continuous readout
+    python -m cobra_bridge.tests.test_sync --monitor --odr 200       # Monitor at 200 Hz
 """
 
 import sys
@@ -51,7 +51,7 @@ def main():
     parser.add_argument('--count', type=int, default=0, help='Samples (0=infinite)')
     args = parser.parse_args()
 
-    print("\n🐍 COBRA — COines BRidge Access v1.0")
+    print("\n🐍 COBRA — COines BRidge Access v0.1.0")
     print("━" * 40)
 
     port = args.port
@@ -59,14 +59,14 @@ def main():
         print("  Auto-detecting AppBoard...")
         port = auto_detect_port()
         if not port:
-            print("  ✗ No AppBoard found. Try: python bmm350_test.py /dev/ttyACM0")
+            print("  ✗ No AppBoard found. Try: python -m cobra_bridge.tests.test_sync /dev/ttyACM0")
             sys.exit(1)
 
     print(f"  Port: {port} @ {args.baud} baud")
 
     from cobra_bridge.sync import CobraBridge
     from cobra_bridge.drivers.bmm350 import BMM350
-    from cobra_constants import BMM350_ODR
+    from cobra_bridge.constants import BMM350_ODR
 
     bridge = CobraBridge(port=port, baudrate=args.baud)
     try:
