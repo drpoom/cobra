@@ -1,16 +1,36 @@
 """
-COBRA: COines BRidge Access — Core Protocol Layer (Python)
+COBRA Sync — Synchronous Protocol Bridge (Python)
 
-Implements the COINES V3 binary protocol over USB-Serial.
+Implements the COINES V3 binary protocol over any Transport backend.
 See ../core/PROTOCOL.md for the language-agnostic specification.
 
-Usage:
-    from cobra_core import CobraBridge
+The CobraBridge class is now transport-agnostic: it accepts any
+Transport instance (SerialTransport, BleTransport, or custom) and
+uses only transport.send() and transport.receive() for I/O.
+Packet building, parsing, checksums, and the I2C/SPI/board API
+remain identical regardless of connection type.
 
-    bridge = CobraBridge(port='/dev/ttyUSB0')
+Usage:
+    from cobra_transport import SerialTransport, BleTransport
+    from cobra_sync import CobraBridge
+
+    # USB-Serial
+    transport = SerialTransport(port='/dev/ttyACM0')
+    bridge = CobraBridge(transport=transport)
+
+    # BLE
+    transport = BleTransport(address='AA:BB:CC:DD:EE:FF')
+    bridge = CobraBridge(transport=transport)
+
     bridge.connect()
     chip_id = bridge.i2c_read(dev_addr=0x14, reg_addr=0x00, length=1)
     print(f"Chip ID: 0x{chip_id[0]:02X}")
+    bridge.disconnect()
+
+Legacy (backward-compatible) usage:
+    bridge = CobraBridge(port='/dev/ttyUSB0')  # Creates SerialTransport internally
+    bridge.connect()
+    ...
     bridge.disconnect()
 """
 
@@ -28,46 +48,62 @@ from cobra_constants import (
     SPI_SPEED_5MHZ, SPI_SPEED_10MHZ,
     SPI_MODE_0, SPI_MODE_3,
 )
+from cobra_transport import Transport, SerialTransport
 
 
 class CobraBridge:
     """
-    Synchronous COINES V3 bridge over USB-Serial.
+    COINES V3 protocol bridge — transport-agnostic.
 
-    Provides send_packet / receive_packet primitives plus
-    convenience methods for I2C and SPI register access.
+    Takes a Transport backend (Serial, BLE, or custom) and provides
+    send_packet / receive_packet / transact primitives plus convenience
+    methods for I2C, SPI, and board control.
+
+    The packetizer (build_packet, receive_packet) and all higher-level
+    API methods are identical regardless of transport type. Only
+    transport.send() and transport.receive() change.
     """
 
-    def __init__(self, port: str = '/dev/ttyUSB0', baudrate: int = 115200, timeout: float = 2.0):
-        self.port = port
-        self.baudrate = baudrate
-        self.timeout = timeout
-        self._ser = None
+    def __init__(self, transport: Optional[Transport] = None,
+                 port: str = '/dev/ttyUSB0', baudrate: int = 115200,
+                 timeout: float = 2.0):
+        """
+        Create a CobraBridge with a transport backend.
+
+        Args:
+            transport: Transport instance (SerialTransport, BleTransport, etc.)
+                       If None, creates a SerialTransport from port/baudrate/timeout.
+            port: Serial port (only used if transport is None).
+            baudrate: Baud rate (only used if transport is None).
+            timeout: Default timeout in seconds.
+        """
+        if transport is not None:
+            self._transport = transport
+        else:
+            # Legacy: auto-create SerialTransport
+            self._transport = SerialTransport(
+                port=port, baudrate=baudrate, timeout=timeout
+            )
+        self._timeout = timeout
+
+    @property
+    def transport(self) -> Transport:
+        """Access the underlying transport backend."""
+        return self._transport
 
     # ── Connection ────────────────────────────────────────────────────────
 
     def connect(self):
-        """Open the serial port."""
-        import serial
-        self._ser = serial.Serial(
-            port=self.port,
-            baudrate=self.baudrate,
-            timeout=self.timeout,
-            bytesize=8, parity='N', stopbits=1,
-        )
-        time.sleep(0.1)
-        self._ser.reset_input_buffer()
-        self._ser.reset_output_buffer()
+        """Open the transport connection."""
+        self._transport.connect()
 
     def disconnect(self):
-        """Close the serial port."""
-        if self._ser and self._ser.is_open:
-            self._ser.close()
-        self._ser = None
+        """Close the transport connection."""
+        self._transport.disconnect()
 
     @property
     def connected(self) -> bool:
-        return self._ser is not None and self._ser.is_open
+        return self._transport.connected
 
     # ── Low-Level Protocol (see core/PROTOCOL.md §1) ─────────────────────
 
@@ -96,52 +132,42 @@ class CobraBridge:
         return frame + struct.pack('B', xor)
 
     def send_packet(self, ptype: int, command: int, payload: bytes = b'') -> None:
-        """Build and send a COINES V3 packet."""
-        pkt = self.build_packet(ptype, command, payload)
+        """Build and send a COINES V3 packet via transport."""
         if not self.connected:
-            raise ConnectionError("Serial port not connected")
-        self._ser.write(pkt)
-        self._ser.flush()
+            raise ConnectionError("Transport not connected")
+        pkt = self.build_packet(ptype, command, payload)
+        self._transport.send(pkt)
 
     def receive_packet(self, timeout: Optional[float] = None) -> tuple:
         """
-        Read and parse a COINES V3 response packet.
+        Read and parse a COINES V3 response packet via transport.
 
-        Implements the packet parsing algorithm from core/PROTOCOL.md §1.
         Returns (ptype, command, status, data) tuple.
         """
         if not self.connected:
-            raise ConnectionError("Serial port not connected")
+            raise ConnectionError("Transport not connected")
 
-        t_out = timeout or self.timeout
-        deadline = time.time() + t_out
+        t_out = timeout or self._timeout
 
         # 1. Wait for header 0xAA
-        while time.time() < deadline:
-            b = self._ser.read(1)
+        while True:
+            b = self._transport.receive(1, timeout=t_out)
             if b == b'\xAA':
                 break
-        else:
-            raise TimeoutError("No response header received")
+            # Non-header byte — skip and keep looking
 
         # 2. Read type, command, length_lo, length_hi
-        header_rest = self._ser.read(4)
-        if len(header_rest) < 4:
-            raise TimeoutError("Incomplete response header")
+        header_rest = self._transport.receive(4, timeout=t_out)
         ptype, command, length_lo, length_hi = struct.unpack('<BBBB', header_rest)
         length = length_lo | (length_hi << 8)
 
         # 3. Read payload
         payload = b''
         if length > 0:
-            payload = self._ser.read(length)
-            if len(payload) < length:
-                raise TimeoutError(f"Incomplete payload: expected {length}, got {len(payload)}")
+            payload = self._transport.receive(length, timeout=t_out)
 
         # 4. Read checksum
-        xor_byte = self._ser.read(1)
-        if len(xor_byte) < 1:
-            raise TimeoutError("Missing checksum byte")
+        xor_byte = self._transport.receive(1, timeout=t_out)
 
         # 5. Verify checksum
         frame = struct.pack('<BBBB', HEADER, ptype, command, length_lo)

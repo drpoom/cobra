@@ -1,7 +1,7 @@
 """
-COBRA V2: BMM350Async — Non-Blocking Magnetometer Driver
+COBRA Async: BMM350Async — Non-Blocking Magnetometer Driver
 
-High-rate sensor driver (up to 400 Hz) that uses the V2 AsyncBridge
+High-rate sensor driver (up to 400 Hz) that uses the AsyncBridge
 with background reader thread. Updated with official Bosch BMM350_SensorAPI
 v1.10.0 conversion formulas (24-bit data, proper μT/°C coefficients, OTP compensation).
 
@@ -13,8 +13,8 @@ Key changes from V1:
   - set_odr(frequency_hz) with user-friendly Hz input
 
 Usage:
-    from cobra_bridge_v2 import AsyncBridge
-    from bmm350_v2 import BMM350Async
+    from cobra_async import AsyncBridge
+    from bmm350_async import BMM350Async
 
     bridge = AsyncBridge(port='/dev/ttyACM0')
     bridge.connect()

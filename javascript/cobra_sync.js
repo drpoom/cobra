@@ -1,12 +1,13 @@
 /**
- * COBRA: COines BRidge Access — Core Protocol Layer (JavaScript/WebSerial)
+ * COBRA Sync — Synchronous Protocol Bridge (JavaScript/WebSerial)
  *
  * Implements the COINES V3 binary protocol over WebSerial API.
- * Mirrors python/cobra_core.py — same packet building/parsing, same API.
+ * Transport-agnostic: works with SerialTransport (WebSerial) or BleTransport (WebBluetooth).
+ * Mirrors python/cobra_sync.py — same packet building/parsing, same API.
  * See ../core/PROTOCOL.md for the language-agnostic specification.
  *
  * Usage:
- *   import { CobraBridge } from './cobra_core.js';
+ *   import { CobraBridge } from './cobra_sync.js';
  *   const bridge = new CobraBridge();
  *   await bridge.connect();
  *   const chipId = await bridge.i2cRead(0x14, 0x00, 1);

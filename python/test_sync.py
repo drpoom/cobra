@@ -27,7 +27,7 @@ def auto_detect_port() -> str:
     }
     ports = candidates.get(platform.system(), candidates['Linux'])
 
-    from cobra_core import CobraBridge
+    from cobra_sync import CobraBridge
     for port in ports:
         try:
             bridge = CobraBridge(port=port, timeout=1.0)
@@ -64,8 +64,8 @@ def main():
 
     print(f"  Port: {port} @ {args.baud} baud")
 
-    from cobra_core import CobraBridge
-    from bmm350 import BMM350
+    from cobra_sync import CobraBridge
+    from bmm350_sync import BMM350
     from cobra_constants import BMM350_ODR
 
     bridge = CobraBridge(port=port, baudrate=args.baud)

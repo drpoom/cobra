@@ -2,141 +2,241 @@
 
 Pure Python & JavaScript implementation of the Bosch COINES V3 Bridge Protocol for the Application Board 3.1 + BMM350 magnetometer.
 
+Supports **USB-Serial** and **BLE** (Nordic UART Service) backends with identical protocol logic — only the transport layer changes.
+
+## Architecture
+
+```
+                    ┌──────────────┐     ┌─────────────┐
+                    │  CobraBridge │────▶│  Transport  │  ← abstract base
+                    │  (Packetizer)│     │  (I/O)      │
+                    └──────────────┘     └─────────────┘
+                                              │
+                              ┌────────────────┴────────────────┐
+                              │                                  │
+                     ┌────────┴────────┐              ┌────────┴────────┐
+                     │ Serial Transport  │              │  BLE Transport  │
+                     │ (pyserial /       │              │  (Bleak /        │
+                     │  WebSerial)       │              │   WebBluetooth)  │
+                     └──────────────────┘              └─────────────────┘
+```
+
+COINES V3 packets travel identically over both transports — same framing, same checksums, same protocol. The packetizer (`CobraBridge`) and BMM350 driver are completely transport-agnostic.
+
 ## Project Structure
 
 ```
 drpoom/cobra/
-├── core/                   # Language-agnostic protocol specification
-│   ├── PROTOCOL.md         # Human-readable COINES V3 reference
-│   └── protocol_spec.json  # Machine-readable single source of truth ★
-├── python/                 # COBRA Python (V1 sync / V2 async / V3 PRO)
-│   ├── cobra_constants.py  # Constants loaded from protocol_spec.json
-│   ├── cobra_core.py       # V1: CobraBridge — sync protocol over pyserial
-│   ├── cobra_reader.py     # V2: CobraReader — background serial reader thread
-│   ├── cobra_bridge_v2.py  # V2: AsyncBridge — CobraBridge + CobraReader
-│   ├── bmm350.py           # V1: BMM350 blocking driver
-│   ├── bmm350_v2.py        # V2: BMM350Async — non-blocking 400Hz driver
-│   ├── bmm350_test.py      # V1: CLI test tool
-│   ├── bmm350_test_v2.py   # V2: Async monitor with CSV/JSON logging
-│   └── generate_constants_js.py  # Auto-generates JS constants from JSON
-├── javascript/             # COBRA.js (V4 — WebSerial)
-│   ├── cobra_constants.js  # Auto-generated from protocol_spec.json
-│   ├── cobra_core.js       # CobraBridge — protocol over WebSerial
-│   └── index.html          # One-page BMM350 dashboard
-├── project_spec.md         # Technical specification & roadmap
-└── LICENSE                 # MIT
+├── core/                        # Language-agnostic protocol specification
+│   ├── PROTOCOL.md              # Human-readable COINES V3 reference
+│   └── protocol_spec.json       # Machine-readable single source of truth ★
+│
+├── python/                      # COBRA Python
+│   ├── cobra_constants.py       # Constants loaded from protocol_spec.json
+│   ├── cobra_transport.py       # Transport ABC + SerialTransport + BleTransport
+│   ├── cobra_sync.py            # CobraBridge — sync protocol (any transport)
+│   ├── cobra_reader.py          # CobraReader — background serial reader thread
+│   ├── cobra_async.py            # AsyncBridge — sync bridge + reader thread
+│   ├── bmm350_sync.py           # BMM350 blocking driver
+│   ├── bmm350_async.py          # BMM350Async — non-blocking 400Hz driver
+│   ├── test_sync.py             # CLI test tool (sync)
+│   ├── test_async.py            # Async monitor with CSV/JSON logging
+│   └── generate_constants_js.py # Auto-generates JS constants from JSON
+│
+├── javascript/                  # COBRA.js
+│   ├── cobra_constants.js       # Auto-generated from protocol_spec.json
+│   ├── cobra_transport.js       # SerialTransport + BleTransport (Web APIs)
+│   ├── cobra_sync.js            # CobraBridge — sync protocol (any transport)
+│   ├── bmm350.js                # BMM350 driver (mirrors Python API)
+│   └── index.html               # One-page BMM350 dashboard
+│
+├── project_spec.md              # Technical specification & roadmap
+└── LICENSE                      # MIT
 ```
 
-## Design Philosophy
+## Tiers
 
-**`core/protocol_spec.json` is the single source of truth.** All protocol constants, command IDs, payload formats, and sensor register maps live there. Both Python and JavaScript derive from it — never hardcode.
+| Tier | Mode | Python | JavaScript | Features |
+|------|------|--------|------------|----------|
+| **Sync** | Request-response blocking | `cobra_sync.py` + `cobra_transport.py` | `cobra_sync.js` + `cobra_transport.js` | I2C/SPI, board control, BMM350 driver |
+| **Async** | Non-blocking threaded reads | `cobra_async.py` + `cobra_reader.py` | — | 400Hz polling, stale eviction, queue-based |
+| **Streaming** | Binary streaming @ 6.4kHz | 🔜 | 🔜 | μs timestamps, sensor fusion |
 
-- **Edit** `protocol_spec.json` to add/change any constant
-- **Python** `cobra_constants.py` loads the JSON at import time
-- **JavaScript** `cobra_constants.js` is auto-generated via `python generate_constants_js.py`
-- **PROTOCOL.md** is the human-readable reference; if it disagrees with the JSON, the JSON wins
+## Platform × Transport Matrix
 
-## Quick Start — Python V1 (Sync)
+| Transport | Python | JavaScript |
+|-----------|--------|------------|
+| **USB-Serial** | `SerialTransport` (pyserial) | `SerialTransport` (WebSerial) |
+| **BLE** | `BleTransport` (Bleak) | `BleTransport` (WebBluetooth) |
+
+## Quick Start — Python Sync (USB-Serial)
 
 ```bash
 pip install pyserial
 cd python
 
-# Auto-detect AppBoard and read Chip ID
-python bmm350_test.py
+# Read BMM350 Chip ID
+python test_sync.py --port /dev/ttyACM0
 
-# Continuous monitoring at 200 Hz (blocking)
-python bmm350_test.py --monitor --odr 200
+# Continuous monitoring at 200 Hz
+python test_sync.py --port /dev/ttyACM0 --monitor --odr 200
 ```
 
-### Python V1 Library
+### Python Sync Library
 
 ```python
-from cobra_core import CobraBridge
-from bmm350 import BMM350
+from cobra_transport import SerialTransport
+from cobra_sync import CobraBridge
+from bmm350_sync import BMM350
 
-bridge = CobraBridge(port='/dev/ttyACM0')
+transport = SerialTransport(port='/dev/ttyACM0')
+bridge = CobraBridge(transport=transport)
 bridge.connect()
 
 sensor = BMM350(bridge)
 print(f"Chip ID: 0x{sensor.get_chip_id():02X}")  # 0x33
 
-sensor.set_power_mode('continuous')
-sensor.set_odr('100_HZ')
+sensor.set_power_mode('normal')
+sensor.set_odr(100)
 
-if sensor.is_data_ready():
-    data = sensor.read_mag_data()
-    print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
+data = sensor.read_mag_data()
+print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
 
 sensor.set_power_mode('suspend')
 bridge.disconnect()
 ```
 
-## Quick Start — Python V2 (Async, 400 Hz)
+## Quick Start — Python Sync (BLE)
+
+```bash
+pip install pyserial bleak
+cd python
+
+# Scan for BLE devices
+python -c "from cobra_transport import BleTransport; import asyncio; print(asyncio.run(BleTransport.scan()))"
+
+# Connect by MAC address
+python test_sync.py --ble AA:BB:CC:DD:EE:FF
+```
+
+### Python Sync Library (BLE)
+
+```python
+from cobra_transport import BleTransport
+from cobra_sync import CobraBridge
+from bmm350_sync import BMM350
+
+transport = BleTransport(address='AA:BB:CC:DD:EE:FF')
+bridge = CobraBridge(transport=transport)
+bridge.connect()
+
+sensor = BMM350(bridge)
+sensor.init()
+data = sensor.read_mag_data(compensated=True)
+print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
+
+bridge.disconnect()
+```
+
+## Quick Start — Python Async (400 Hz)
 
 ```bash
 # Non-blocking 400 Hz monitor with CSV logging
-python bmm350_test_v2.py --odr 400 --csv data.csv
-
-# 200 Hz with JSON output
-python bmm350_test_v2.py --odr 200 --json data.json
+python test_async.py --port /dev/ttyACM0 --odr 400 --csv data.csv
 ```
 
-### Python V2 Library
+### Python Async Library
 
 ```python
-from cobra_bridge_v2 import AsyncBridge
-from bmm350_v2 import BMM350Async
+from cobra_transport import SerialTransport
+from cobra_async import AsyncBridge
+from bmm350_async import BMM350Async
 
-bridge = AsyncBridge(port='/dev/ttyACM0')
+transport = SerialTransport(port='/dev/ttyACM0')
+bridge = AsyncBridge(transport=transport)
 bridge.connect()  # Starts background reader thread
 
 sensor = BMM350Async(bridge, stale_threshold=8)
 sensor.start_continuous(odr='400_HZ')
 
-# Non-blocking loop — never blocks main execution
 while True:
-    data = sensor.read_sensor()  # Returns dict or None
+    data = sensor.read_sensor()  # Returns dict or None (non-blocking)
     if data:
         print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
-    do_other_work()  # Your code runs freely
+    do_other_work()
 
 sensor.stop_continuous()
 bridge.disconnect()
 ```
 
-### V1 → V2 Key Differences
+## Quick Start — JavaScript (Browser)
 
-| Feature | V1 (CobraBridge) | V2 (AsyncBridge) |
-|---------|-------------------|-------------------|
-| Serial reads | Main thread (blocking) | Background thread |
+Open `javascript/index.html` in Chrome/Edge. Click **Connect AppBoard** (WebSerial) or **Connect BLE** (WebBluetooth), then **Start Monitor**.
+
+### JavaScript Library
+
+```javascript
+import { SerialTransport, BleTransport } from './cobra_transport.js';
+import { CobraBridge } from './cobra_sync.js';
+
+// USB-Serial
+const transport = new SerialTransport();
+await transport.connect();
+
+// BLE
+// const transport = new BleTransport();
+// await transport.connect();
+
+const bridge = new CobraBridge(transport);
+await bridge.connect();
+
+const chipId = await bridge.i2cRead(0x14, 0x00, 1);
+console.log(`Chip ID: 0x${chipId[0].toString(16).padStart(2, '0')}`);
+
+await bridge.disconnect();
+```
+
+## BLE Protocol Details
+
+The AppBoard 3.1 uses **Nordic UART Service (NUS)** over BLE:
+
+| Characteristic | UUID | Direction |
+|---------------|------|-----------|
+| NUS Service | `6e400001-b5a3-f393-e0a9-e50e24dcca9e` | — |
+| RX (write) | `6e400002-b5a3-f393-e0a9-e50e24dcca9e` | Host → AppBoard |
+| TX (notify) | `6e400003-b5a3-f393-e0a9-e50e24dcca9e` | AppBoard → Host |
+
+COINES V3 packets travel as raw bytes over NUS — identical framing and checksums. BLE writes are chunked to 20 bytes (safe GATT MTU default).
+
+## Design Philosophy
+
+**`core/protocol_spec.json` is the single source of truth.** All protocol constants, command IDs, payload formats, and sensor register maps derive from it. Never hardcode.
+
+- **Edit** `protocol_spec.json` to add/change constants
+- **Python** `cobra_constants.py` loads the JSON at import time
+- **JavaScript** `cobra_constants.js` is auto-generated via `python generate_constants_js.py`
+- **PROTOCOL.md** is the human-readable reference; JSON wins if they disagree
+
+## Sync vs Async Comparison
+
+| Feature | Sync (CobraBridge) | Async (AsyncBridge) |
+|---------|-------------------|---------------------|
+| Reads | Main thread (blocking) | Background thread |
 | Max poll rate | ~100 Hz | 400 Hz |
 | read_sensor() | Blocks until response | Non-blocking (returns None or data) |
 | Stale data | No handling | Auto-evicts from queue |
 | Thread safety | Single thread | Write lock + queue |
 | Stats | None | Driver + reader stats |
 | Logging | None | CSV/JSON built-in |
-
-## Quick Start — JavaScript V4 (WebSerial)
-
-Open `javascript/index.html` in Chrome/Edge (WebSerial required). Click **Connect AppBoard**, then **Start Monitor**.
+| Transport | Any (Serial/BLE) | Serial (CobraReader) or any (TransportReader) |
 
 ## Termux (Android)
 
 ```bash
 pkg install python && pip install pyserial
 termux-usb -l
-termux-usb -r -e python bmm350_test_v2.py /dev/bus/usb/001/002
+termux-usb -r -e python test_sync.py /dev/bus/usb/001/002
 ```
-
-## Roadmap
-
-| Version | Mode | Features | Status |
-|---------|------|----------|--------|
-| V1 | Sync polling | I2C/SPI, BMM350 driver, CLI | ✅ |
-| V2 | Async I/O | Threaded reads, 400Hz, stale eviction, CSV/JSON | ✅ |
-| V3 (PRO) | Streaming | Binary streaming @ 6.4kHz, μs timestamps, sensor fusion | 🔜 |
-| V4 | WebSerial | Browser dashboard, real-time plotting | ✅ |
 
 ## License
 

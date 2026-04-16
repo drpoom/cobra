@@ -1,5 +1,5 @@
 """
-COBRA: BMM350 Magnetometer Driver (Python)
+COBRA Sync: BMM350 Magnetometer Driver (Python)
 
 Register-level driver for the Bosch BMM350 magnetometer.
 Based on official Bosch BMM350_SensorAPI v1.10.0 conversion formulas.
@@ -14,8 +14,8 @@ Key changes from V1:
   - set_odr(frequency_hz) with user-friendly Hz input
 
 Usage:
-    from cobra_core import CobraBridge
-    from bmm350 import BMM350
+    from cobra_sync import CobraBridge
+    from bmm350_sync import BMM350
 
     bridge = CobraBridge(port='/dev/ttyACM0')
     bridge.connect()

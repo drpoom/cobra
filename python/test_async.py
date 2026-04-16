@@ -33,7 +33,7 @@ def auto_detect_port() -> str:
     }
     ports = candidates.get(platform.system(), candidates['Linux'])
 
-    from cobra_core import CobraBridge
+    from cobra_sync import CobraBridge
     for port in ports:
         try:
             bridge = CobraBridge(port=port, timeout=1.0)
@@ -74,8 +74,8 @@ def main():
 
     print(f"  Port: {port} @ {args.baud} baud")
 
-    from cobra_bridge_v2 import AsyncBridge
-    from bmm350_v2 import BMM350Async
+    from cobra_async import AsyncBridge
+    from bmm350_async import BMM350Async
 
     bridge = AsyncBridge(port=port, baudrate=args.baud, max_queue_size=64)
     try:
