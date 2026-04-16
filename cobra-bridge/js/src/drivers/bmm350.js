@@ -13,7 +13,7 @@
  *   - setOdR(frequencyHz) with user-friendly Hz input
  *
  * Usage:
- *   import { BMM350 } from 'cobra-js/drivers/bmm350';
+ *   import { BMM350 } from 'cobra-bridge/drivers/bmm350';
  *   const sensor = new BMM350(bridge);
  *   await sensor.init();
  *   const data = await sensor.readMagData();
@@ -25,7 +25,7 @@ import {
     BMM350_I2C_ADDR, BMM350_CHIP_ID, BMM350_DATA_LEN,
     BMM350_REG, BMM350_PMU, BMM350_ODR, BMM350_AVG, BMM350_OTP_ADDR,
     BMM350_LSB_TO_UT_XY, BMM350_LSB_TO_UT_Z, BMM350_LSB_TO_DEGC, BMM350_TEMP_OFFSET,
-} from './constants.js';
+} from '../constants.js';
 
 
 // ── Sign Extension (mirrors Bosch fix_sign) ──────────────────────────────

@@ -5,7 +5,7 @@
  * Supports WebSerial (USB) and WebBluetooth (BLE).
  *
  * Quick start:
- *   import { SerialTransport, CobraBridge } from 'cobra-js';
+ *   import { SerialTransport, CobraBridge } from 'cobra-bridge';
  *   const transport = new SerialTransport();
  *   const bridge = new CobraBridge(transport);
  *   await bridge.connect();

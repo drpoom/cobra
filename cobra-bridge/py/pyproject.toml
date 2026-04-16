@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cobra-py"
+name = "cobra-bridge"
 version = "0.1.0"
 description = "COines BRidge Access — Bosch AppBoard protocol for Python"
 readme = "README.md"

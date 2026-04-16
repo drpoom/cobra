@@ -3,12 +3,13 @@
 Developer: drpoom
 Target Hardware: Bosch Application Board 3.1+
 Primary Sensor: BMM350 Magnetometer (via Shuttle Board)
-Packages: `cobra-py` (PyPI), `cobra-js` (npm)
+Packages: `cobra-bridge` (PyPI + npm, unified name)
 Transports: USB-Serial (pyserial/WebSerial), BLE (Bleak/WebBluetooth)
 
 ## 1. Project Vision
 
-COBRA is a lightweight, transport-agnostic library for the Bosch Sensortec AppBoard. Published as `cobra-py` on PyPI and `cobra-js` on npm, it supports USB-Serial and BLE backends with identical protocol logic.
+COBRA is a lightweight, transport-agnostic library for the Bosch Sensortec AppBoard.
+Published as `cobra-bridge` on both PyPI and npm, it supports USB-Serial and BLE backends with identical protocol logic.
 
 ## 2. Architecture
 
@@ -28,7 +29,7 @@ COBRA is a lightweight, transport-agnostic library for the Bosch Sensortec AppBo
 
 | Tier | Python | JavaScript |
 |------|--------|------------|
-| **Sync** | `cobra_bridge.sync` | `cobra-js/sync` |
+| **Sync** | `cobra_bridge.sync` | `cobra-bridge/sync` |
 | **Async** | `cobra_bridge.async_` | 🔜 |
 | **Streaming** | 🔜 | 🔜 |
 
@@ -36,15 +37,23 @@ COBRA is a lightweight, transport-agnostic library for the Bosch Sensortec AppBo
 
 | Package | Registry | Install | Import |
 |---------|----------|---------|--------|
-| cobra-py | PyPI | `pip install cobra-py` | `from cobra_bridge import ...` |
-| cobra-js | npm | `npm install cobra-js` | `import { ... } from 'cobra-js'` |
+| cobra-bridge | PyPI | `pip install cobra-bridge` | `from cobra_bridge import ...` |
+| cobra-bridge | npm | `npm install cobra-bridge` | `import { ... } from 'cobra-bridge'` |
 
 ## 5. Monorepo Structure
 
 ```
 core/               → protocol_spec.json (single source of truth)
-cobra-py/           → pip package (src/cobra_bridge/)
-cobra-js/           → npm package (src/)
+cobra-bridge/
+├── py/             → pip package (src/cobra_bridge/)
+│   ├── src/cobra_bridge/
+│   ├── tests/
+│   └── pyproject.toml
+├── js/             → npm package (src/)
+│   ├── src/
+│   ├── dashboard.html
+│   └── package.json
+└── README.md       → unified README
 tools/              → gen_constants.py (JSON → .py + .js)
 ```
 
@@ -56,10 +65,10 @@ vim core/protocol_spec.json
 python tools/gen_constants.py
 
 # Python
-cd cobra-py && hatch build && hatch publish
+cd cobra-bridge/py && hatch build && hatch publish
 
 # JavaScript
-cd cobra-js && npm publish --access public
+cd cobra-bridge/js && npm publish --access public
 ```
 
 ## 7. COINES V3 Packet Structure
