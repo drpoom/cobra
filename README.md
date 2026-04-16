@@ -23,7 +23,12 @@ drpoom/cobra/
 
 ## Design Philosophy
 
-The COBRA core logic is **language-agnostic**. The packet-building algorithm is documented in `core/PROTOCOL.md` so that any implementation (Python, JavaScript, future Rust/Go) shares the same command constants and binary framing. All implementations MUST follow `core/PROTOCOL.md` exactly.
+The COBRA core logic is **language-agnostic**. `core/protocol_spec.json` is the single source of truth for all protocol constants, command IDs, payload formats, and sensor register maps. Both Python and JavaScript implementations derive their constants from this JSON — never hardcode.
+
+- **Edit** `core/protocol_spec.json` to add/change any constant
+- **Python** `cobra_constants.py` loads the JSON at import time
+- **JavaScript** `cobra_constants.js` is auto-generated via `python generate_constants_js.py`
+- **PROTOCOL.md** is the human-readable reference; if it disagrees with the JSON, the JSON wins
 
 ## Quick Start — Python (V1)
 

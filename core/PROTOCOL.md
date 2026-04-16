@@ -2,6 +2,8 @@
 
 This directory defines the COBRA protocol layer. All implementations (Python, JavaScript, future bindings) MUST follow this specification exactly.
 
+> **Single Source of Truth:** `protocol_spec.json` contains all numeric constants, register maps, and payload formats in machine-readable form. The Markdown below is the human-readable reference. If they disagree, the JSON wins.
+
 ## 1. Packet Frame Format
 
 All COINES V3 communication uses a binary frame with the following structure:

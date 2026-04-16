@@ -1,0 +1,173 @@
+{
+  "_meta": {
+    "name": "COBRA Protocol Specification",
+    "version": "1.0.0",
+    "description": "Single source of truth for COINES V3 protocol constants and BMM350 register map. All implementations (Python, JavaScript, etc.) must derive their constants from this file.",
+    "license": "MIT",
+    "author": "drpoom"
+  },
+
+  "packet": {
+    "header": 170,
+    "header_hex": "0xAA",
+    "types": {
+      "GET": 1,
+      "SET": 2
+    },
+    "status": {
+      "OK": 0
+    }
+  },
+
+  "commands": {
+    "system": {
+      "GET_BOARD_INFO": 1,
+      "SET_VDD": 4,
+      "SET_PIN": 5,
+      "SET_VDDIO": 6,
+      "INT_CONFIG": 7
+    },
+    "i2c": {
+      "WRITE": 13,
+      "READ": 14
+    },
+    "spi": {
+      "WRITE": 19,
+      "READ": 20
+    }
+  },
+
+  "i2c": {
+    "speed": {
+      "400K": 0,
+      "1M": 1
+    }
+  },
+
+  "spi": {
+    "speed": {
+      "5MHZ": 0,
+      "10MHZ": 1
+    },
+    "mode": {
+      "MODE_0": 0,
+      "MODE_3": 3
+    }
+  },
+
+  "payload_formats": {
+    "i2c_write": {
+      "description": "I2C Write request payload",
+      "fields": [
+        {"offset": 0, "size": 1, "name": "dev_addr", "type": "uint8", "description": "7-bit I2C device address"},
+        {"offset": 1, "size": 1, "name": "speed",    "type": "uint8", "description": "I2C speed enum"},
+        {"offset": 2, "size": 1, "name": "reg_addr", "type": "uint8", "description": "Register address"},
+        {"offset": 3, "size": 1, "name": "data_len", "type": "uint8", "description": "Number of data bytes"},
+        {"offset": 4, "size": "N", "name": "data",   "type": "bytes", "description": "Data to write"}
+      ]
+    },
+    "i2c_read": {
+      "description": "I2C Read request payload",
+      "fields": [
+        {"offset": 0, "size": 1, "name": "dev_addr", "type": "uint8", "description": "7-bit I2C device address"},
+        {"offset": 1, "size": 1, "name": "speed",    "type": "uint8", "description": "I2C speed enum"},
+        {"offset": 2, "size": 1, "name": "reg_addr", "type": "uint8", "description": "Register address to read"},
+        {"offset": 3, "size": 1, "name": "length",   "type": "uint8", "description": "Number of bytes to read"}
+      ]
+    },
+    "spi_write": {
+      "description": "SPI Write request payload",
+      "fields": [
+        {"offset": 0, "size": 1, "name": "cs",       "type": "uint8", "description": "Chip-select line index"},
+        {"offset": 1, "size": 1, "name": "speed",    "type": "uint8", "description": "SPI speed enum"},
+        {"offset": 2, "size": 1, "name": "mode",     "type": "uint8", "description": "SPI mode (0 or 3)"},
+        {"offset": 3, "size": 1, "name": "reg_addr", "type": "uint8", "description": "Register address"},
+        {"offset": 4, "size": 1, "name": "data_len", "type": "uint8", "description": "Number of data bytes"},
+        {"offset": 5, "size": "N", "name": "data",   "type": "bytes", "description": "Data to write"}
+      ]
+    },
+    "spi_read": {
+      "description": "SPI Read request payload",
+      "fields": [
+        {"offset": 0, "size": 1, "name": "cs",       "type": "uint8", "description": "Chip-select line index"},
+        {"offset": 1, "size": 1, "name": "speed",    "type": "uint8", "description": "SPI speed enum"},
+        {"offset": 2, "size": 1, "name": "mode",     "type": "uint8", "description": "SPI mode (0 or 3)"},
+        {"offset": 3, "size": 1, "name": "reg_addr", "type": "uint8", "description": "Register address to read"},
+        {"offset": 4, "size": 1, "name": "length",   "type": "uint8", "description": "Number of bytes to read"}
+      ]
+    },
+    "set_vdd": {
+      "description": "Set VDD voltage",
+      "fields": [
+        {"offset": 0, "size": 2, "name": "voltage_mv", "type": "uint16_le", "description": "Voltage in millivolts (0=off)"}
+      ]
+    },
+    "set_vddio": {
+      "description": "Set VDDIO voltage",
+      "fields": [
+        {"offset": 0, "size": 2, "name": "voltage_mv", "type": "uint16_le", "description": "Voltage in millivolts (0=off)"}
+      ]
+    }
+  },
+
+  "sensors": {
+    "bmm350": {
+      "i2c_addr": 20,
+      "i2c_addr_hex": "0x14",
+      "chip_id": 51,
+      "chip_id_hex": "0x33",
+      "sensitivity_ut_per_lsb": 0.166667,
+
+      "registers": {
+        "CHIP_ID":     {"address": 0,  "hex": "0x00", "access": "R",   "description": "Chip ID (expected 0x33)"},
+        "PMU_CMD":     {"address": 2,  "hex": "0x02", "access": "W",   "description": "Power mode command"},
+        "PMU_STATUS":  {"address": 3,  "hex": "0x03", "access": "R",   "description": "Current power mode"},
+        "ODR_AXIS":    {"address": 33, "hex": "0x21", "access": "R/W", "description": "Output data rate and axis enable"},
+        "AVERAGE":     {"address": 34, "hex": "0x22", "access": "R/W", "description": "Averaging configuration"},
+        "REP_XY":      {"address": 35, "hex": "0x23", "access": "R/W", "description": "Repetition count for X/Y"},
+        "REP_Z":       {"address": 36, "hex": "0x24", "access": "R/W", "description": "Repetition count for Z"},
+        "OFC_CTRL":    {"address": 37, "hex": "0x25", "access": "R/W", "description": "Offset correction control"},
+        "OFC_X":       {"address": 38, "hex": "0x26", "access": "R/W", "description": "Offset correction X"},
+        "OFC_Y":       {"address": 40, "hex": "0x28", "access": "R/W", "description": "Offset correction Y"},
+        "OFC_Z":       {"address": 42, "hex": "0x2A", "access": "R/W", "description": "Offset correction Z"},
+        "INT_CTRL":    {"address": 45, "hex": "0x2D", "access": "R/W", "description": "Interrupt control"},
+        "INT_STATUS":  {"address": 46, "hex": "0x2E", "access": "R",   "description": "Interrupt status"},
+        "DATA_X_LSB":  {"address": 48, "hex": "0x30", "access": "R",   "description": "X-axis data LSB"},
+        "DATA_X_MSB":  {"address": 49, "hex": "0x31", "access": "R",   "description": "X-axis data MSB"},
+        "DATA_Y_LSB":  {"address": 50, "hex": "0x32", "access": "R",   "description": "Y-axis data LSB"},
+        "DATA_Y_MSB":  {"address": 51, "hex": "0x33", "access": "R",   "description": "Y-axis data MSB"},
+        "DATA_Z_LSB":  {"address": 52, "hex": "0x34", "access": "R",   "description": "Z-axis data LSB"},
+        "DATA_Z_MSB":  {"address": 53, "hex": "0x35", "access": "R",   "description": "Z-axis data MSB"},
+        "SELF_TEST":   {"address": 54, "hex": "0x36", "access": "R/W", "description": "Self-test configuration"},
+        "SELF_TEST_STATUS": {"address": 55, "hex": "0x37", "access": "R", "description": "Self-test status"},
+        "ERR_STAT":    {"address": 62, "hex": "0x3E", "access": "R",   "description": "Error status"},
+        "STATUS":      {"address": 63, "hex": "0x3F", "access": "R",   "description": "Data ready flag"}
+      },
+
+      "pmu_commands": {
+        "SUSPEND":    1,
+        "NORMAL":     2,
+        "FORCED":     3,
+        "CONTINUOUS": 4,
+        "SOFT_RESET": 128
+      },
+
+      "pmu_status": {
+        "SUSPEND":    1,
+        "NORMAL":     2,
+        "FORCED":     3,
+        "CONTINUOUS": 4
+      },
+
+      "odr": {
+        "400_HZ":  0,
+        "200_HZ":  1,
+        "100_HZ":  2,
+        "50_HZ":   3,
+        "25_HZ":   4,
+        "12_5_HZ": 5,
+        "6_25_HZ": 6
+      }
+    }
+  }
+}

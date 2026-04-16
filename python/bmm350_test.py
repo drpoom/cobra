@@ -65,7 +65,8 @@ def main():
     print(f"  Port: {port} @ {args.baud} baud")
 
     from cobra_core import CobraBridge
-    from bmm350 import BMM350, ODR_100HZ, ODR_200HZ, ODR_50HZ, ODR_25HZ, ODR_400HZ
+    from bmm350 import BMM350
+    from cobra_constants import BMM350_ODR
 
     bridge = CobraBridge(port=port, baudrate=args.baud)
     try:
@@ -93,9 +94,9 @@ def main():
 
     # ── Monitor ───────────────────────────────────────────────────────────
     if args.monitor:
-        odr_map = {400: ODR_400HZ, 200: ODR_200HZ, 100: ODR_100HZ, 50: ODR_50HZ, 25: ODR_25HZ}
+        odr_key_map = {400: '400_HZ', 200: '200_HZ', 100: '100_HZ', 50: '50_HZ', 25: '25_HZ'}
         sensor.set_power_mode('continuous')
-        sensor.set_odr(odr_map.get(args.odr, ODR_100HZ))
+        sensor.set_odr(odr_key_map.get(args.odr, '100_HZ'))
         time.sleep(0.05)
         print(f"\n  Monitoring @ {args.odr} Hz (Ctrl+C to stop):\n")
         print(f"  {'#':>7}  {'X(uT)':>10}  {'Y(uT)':>10}  {'Z(uT)':>10}")
