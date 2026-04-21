@@ -2,7 +2,7 @@
 
 Bosch AppBoard protocol library — **Python** and **JavaScript** — over **USB-Serial** and **BLE**.
 
-Implements the COINES V3 Bridge Protocol for Application Board 3.1+ with BMM350 magnetometer support. Transport-agnostic: only the I/O layer changes per backend; the packetizer and sensor drivers remain identical.
+Implements the COINES V3 Bridge Protocol for Application Board 3.1+ with a **sensor-agnostic driver framework**. Transport-agnostic: only the I/O layer changes per backend; the packetizer and sensor drivers remain identical. Adding a new sensor = writing one driver class + one JSON spec.
 
 ## Packages
 
@@ -20,14 +20,24 @@ Implements the COINES V3 Bridge Protocol for Application Board 3.1+ with BMM350 
                     │  CobraBridge │────▶│  Transport  │  ← abstract base
                     │  (Packetizer)│     │  (I/O)      │
                     └──────────────┘     └─────────────┘
-                                              │
-                              ┌────────────────┴────────────────┐
-                              │                                  │
-                     ┌────────┴────────┐              ┌────────┴────────┐
-                     │ Serial Transport │              │  BLE Transport  │
-                     │ (pyserial /      │              │  (Bleak /        │
-                     │  WebSerial)      │              │   WebBluetooth)  │
-                     └──────────────────┘              └─────────────────┘
+                           │                    │
+                    ┌──────┴──────┐    ┌────────┴────────┐
+                    │  CobraBoard │    │ Serial Transport │
+                    │  (High-level│    │  (pyserial /     │
+                    │   API)      │    │   WebSerial)     │
+                    └──────┬──────┘    └──────────────────┘
+                           │           ┌──────────────────┐
+                    ┌──────┴──────┐    │  BLE Transport   │
+                    │ SensorDriver│    │  (Bleak /        │
+                    │  (ABC)      │    │   WebBluetooth)  │
+                    └──────┬──────┘    └──────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+        ┌─────┴─────┐ ┌───┴────┐ ┌────┴────┐
+        │  BMM350   │ │ Future │ │ Future  │
+        │  Driver   │ │ Driver │ │ Driver  │
+        └───────────┘ └────────┘ └─────────┘
 ```
 
 ## Tiers
@@ -79,55 +89,68 @@ pip install cobra-bridge
 cobra/
 ├── core/                        # Language-agnostic protocol specification
 │   ├── PROTOCOL.md              # Human-readable COINES V3 reference
-│   └── protocol_spec.json       # Machine-readable single source of truth ★
+│   ├── protocol_spec.json       # Machine-readable single source of truth ★
+│   └── sensors/                 # Per-sensor JSON specs (single source of truth)
+│       └── bmm350.json          # BMM350 register map + coefficients
 │
-├── cobra-bridge/                ← unified package directory
-│   ├── py/                      ← pip install cobra-bridge
-│   │   ├── pyproject.toml
-│   │   ├── src/cobra_bridge/
-│   │   │   ├── __init__.py
-│   │   │   ├── constants.py     ← auto-generated from JSON
-│   │   │   ├── transport.py     # Transport ABC + Serial + BLE
-│   │   │   ├── sync.py          # CobraBridge (sync, any transport)
-│   │   │   ├── reader.py        # Background serial reader thread
-│   │   │   ├── async_.py        # AsyncBridge (non-blocking)
-│   │   │   └── drivers/
-│   │   │       ├── bmm350.py    # BMM350 sync driver
-│   │   │       └── bmm350_async.py  # BMM350 async driver
-│   │   └── tests/
-│   │       ├── test_sync.py
-│   │       └── test_async.py
-│   │
-│   ├── js/                      ← npm install cobra-bridge
-│   │   ├── package.json
-│   │   ├── src/
-│   │   │   ├── index.js         # Re-exports
-│   │   │   ├── constants.js     ← auto-generated from JSON
-│   │   │   ├── transport.js     # SerialTransport + BleTransport
-│   │   │   ├── sync.js          # CobraBridge (sync, any transport)
-│   │   │   └── drivers/
-│   │   │       └── bmm350.js    # BMM350 driver (mirrors Python API)
-│   │   └── dashboard.html       # Browser dashboard (USB + BLE)
-│   │
-│   └── README.md                # Package-level docs
+├── py/                          ← pip install cobra-bridge
+│   ├── pyproject.toml
+│   ├── src/cobra_bridge/
+│   │   ├── __init__.py
+│   │   ├── constants.py         ← auto-generated (board-level only)
+│   │   ├── transport.py         # Transport ABC + Serial + BLE + CobraTransport
+│   │   ├── sync.py              # CobraSyncBridge (sync, any transport)
+│   │   ├── reader.py            # Background serial reader thread
+│   │   ├── async_.py            # AsyncCobraBridge (non-blocking)
+│   │   ├── cobra_wrapper.py     # CobraBoard / AsyncCobraBoard (coinespy-compatible)
+│   │   └── drivers/
+│   │       ├── __init__.py      # Driver framework exports
+│   │       ├── base.py          # SensorDriver ABC + SensorData
+│   │       ├── utils.py         # Shared utilities (fix_sign)
+│   │       ├── bmm350.py        # BMM350Driver (sync)
+│   │       ├── bmm350_async.py  # BMM350AsyncDriver (non-blocking)
+│   │       └── bmm350_constants.py  ← auto-generated from bmm350.json
+│   └── tests/
+│       ├── test_sync.py
+│       ├── test_async.py
+│       ├── test_drivers.py      # Unit tests for driver framework
+│       └── test_cobra_wrapper.py
+│
+├── js/                          ← npm install cobra-bridge
+│   ├── package.json
+│   ├── src/
+│   │   ├── index.js             # Re-exports
+│   │   ├── constants.js          ← auto-generated (board-level only)
+│   │   ├── transport.js          # SerialTransport + BleTransport + CobraTransportJs
+│   │   ├── sync.js               # CobraBridge (sync, any transport)
+│   │   ├── cobra_wrapper.js      # CobraBoardJs (coinespy-compatible)
+│   │   └── drivers/
+│   │       ├── base.js           # SensorDriver base + SensorData
+│   │       ├── utils.js          # Shared utilities (fixSign)
+│   │       ├── bmm350.js         # BMM350Driver (mirrors Python API)
+│   │       └── bmm350_constants.js  ← auto-generated from bmm350.json
+│   └── dashboard.html            # Browser dashboard (USB + BLE)
 │
 └── tools/
-    └── gen_constants.py         # Reads JSON → writes BOTH .py AND .js
+    └── gen_constants.py          # Reads JSON → writes BOTH .py AND .js
 ```
 
 ## Single Source of Truth
 
-`core/protocol_spec.json` defines all protocol constants, register maps, and conversion coefficients. **Never hardcode.**
+`core/protocol_spec.json` defines all **board-level** protocol constants. `core/sensors/*.json` defines per-sensor register maps and coefficients. **Never hardcode.**
 
 ```bash
 # Edit the source of truth
-vim core/protocol_spec.json
+vim core/protocol_spec.json          # Board-level constants
+vim core/sensors/bmm350.json         # BMM350 register map + coefficients
 
 # Regenerate constants for both packages
 python tools/gen_constants.py
 
-# → cobra-bridge/py/src/cobra_bridge/constants.py
-# → cobra-bridge/js/src/constants.js
+# → py/src/cobra_bridge/constants.py          (board-level only)
+# → js/src/constants.js                        (board-level only)
+# → py/src/cobra_bridge/drivers/bmm350_constants.py  (BMM350-specific)
+# → js/src/drivers/bmm350_constants.js               (BMM350-specific)
 ```
 
 The JSON never ships in published packages — generated constants are self-contained.
@@ -143,7 +166,8 @@ pip install cobra-bridge
 ```python
 from cobra_bridge.transport import SerialTransport
 from cobra_bridge.sync import CobraBridge
-from cobra_bridge.drivers.bmm350 import BMM350
+from cobra_bridge.cobra_wrapper import CobraBoard
+from cobra_bridge.drivers.bmm350 import BMM350Driver
 
 # USB-Serial
 transport = SerialTransport(port='/dev/ttyACM0')    # Linux
@@ -153,12 +177,21 @@ transport = SerialTransport(port='/dev/ttyACM0')    # Linux
 bridge = CobraBridge(transport=transport)
 bridge.connect()
 
-# init() now handles full board setup: I2C bus config, pin config,
-# power cycle, soft reset, OTP, and magnetic reset
-sensor = BMM350(bridge)
-sensor.init()  # I2C bus 0, 400K, VDD/VDDIO 1800mV
-data = sensor.read_mag_data(compensated=True)
-print(f"X={data['x']:.2f} Y={data['y']:.2f} Z={data['z']:.2f} uT")
+# Board-level API (coinespy-compatible)
+board = CobraBoard()
+board.open_comm_interface(0)  # USB
+
+# Sensor driver (sensor-agnostic framework)
+sensor = BMM350Driver(board, interface="i2c", bus=0)
+sensor.setup_board()  # I2C bus config, pin config, power cycle
+sensor.init()         # Soft reset, chip ID verify, OTP, magnetic reset
+data = sensor.read_data(compensated=True)
+print(f"X={data.x:.2f} Y={data.y:.2f} Z={data.z:.2f} uT  T={data.temperature:.2f}°C")
+
+# Backward-compatible alias still works:
+# from cobra_bridge.drivers.bmm350 import BMM350
+# sensor = BMM350(board)
+# data = sensor.read_mag_data(compensated=True)  # Returns dict
 
 bridge.disconnect()
 ```
@@ -221,18 +254,24 @@ npm install cobra-bridge
 
 ```javascript
 import { SerialTransport, CobraBridge } from 'cobra-bridge';
-import { BMM350 } from 'cobra-bridge/drivers/bmm350.js';
+import { BMM350Driver } from 'cobra-bridge/drivers/bmm350.js';
 
 const transport = new SerialTransport();
 const bridge = new CobraBridge(transport);
 await bridge.connect();
 
-// init() handles full board setup automatically
-const sensor = new BMM350(bridge);
-await sensor.init();  // I2C bus 0, 400K, 1800mV
+// Sensor driver (sensor-agnostic framework)
+const sensor = new BMM350Driver(bridge, { interface: 'i2c', bus: 0 });
+await sensor.setupBoard();
+await sensor.init();
 
-const data = await sensor.readMagData(true);
+const data = await sensor.readData(true);  // compensated
 console.log(`X=${data.x.toFixed(2)} Y=${data.y.toFixed(2)} Z=${data.z.toFixed(2)} μT`);
+
+// Backward-compatible alias still works:
+// import { BMM350 } from 'cobra-bridge/drivers/bmm350.js';
+// const sensor = new BMM350(bridge);
+// const data = await sensor.readMagData(true);  // Returns plain object
 
 await bridge.disconnect();
 ```
@@ -283,6 +322,72 @@ AppBoard 3.1 uses **Nordic UART Service (NUS)** over BLE:
 
 Same COINES V3 packets over NUS — identical framing and checksums.
 
+## Sensor Driver Framework
+
+COBRA v0.2 introduces a **sensor-agnostic driver framework** — adding a new sensor requires only:
+
+1. **One JSON spec** in `core/sensors/{sensor}.json` (register map + coefficients)
+2. **One driver class** inheriting `SensorDriver` (Python + JS)
+3. **Run `gen_constants.py`** to generate per-sensor constants
+
+### SensorDriver ABC
+
+Every sensor driver inherits from `SensorDriver` and implements:
+
+| Method | Description |
+|--------|-------------|
+| `init()` | Full sensor-level initialization |
+| `soft_reset()` | Send soft reset command |
+| `get_chip_id()` | Read and return chip ID |
+| `self_test()` | Run built-in self test |
+| `configure(settings)` | Apply sensor configuration |
+| `read_data()` | Read sensor data (returns `SensorData` subclass) |
+
+### Adding a New Sensor
+
+```bash
+# 1. Create sensor spec
+vim core/sensors/bma456.json
+
+# 2. Regenerate constants
+python tools/gen_constants.py
+# → py/src/cobra_bridge/drivers/bma456_constants.py
+# → js/src/drivers/bma456_constants.js
+
+# 3. Implement driver (Python)
+# py/src/cobra_bridge/drivers/bma456.py
+class BMA456Driver(SensorDriver):
+    name = "bma456"
+    chip_id = 0x46
+    i2c_addr = 0x68
+    # ... implement abstract methods
+
+# 4. Implement driver (JavaScript)
+# js/src/drivers/bma456.js
+export class BMA456Driver extends SensorDriver {
+    static name = 'bma456';
+    static chipId = 0x46;
+    static i2cAddr = 0x68;
+    // ... implement abstract methods
+```
+
+### Board Convenience Methods
+
+`CobraBoard` / `AsyncCobraBoard` / `CobraBoardJs` provide board-level methods that drivers use:
+
+| Method | Description |
+|--------|-------------|
+| `set_vdd(mv)` / `setVdd(mv)` | Set VDD voltage (0 = off) |
+| `set_vddio(mv)` / `setVddio(mv)` | Set VDDIO voltage (0 = off) |
+| `set_pin(pin, dir, val)` / `setPin(...)` | Configure GPIO pin |
+| `i2c_read_reg(addr, reg, len)` / `i2cReadReg(...)` | I2C register read |
+| `i2c_write_reg(addr, reg, data)` / `i2cWriteReg(...)` | I2C register write |
+| `spi_read_reg(cs, reg, len)` / `spiReadReg(...)` | SPI register read |
+| `spi_write_reg(cs, reg, data)` / `spiWriteReg(...)` | SPI register write |
+| `attach_driver(driver)` / `attachDriver(driver)` | Register a driver instance |
+| `get_driver(name)` / `getDriver(name)` | Retrieve a driver by name |
+| `drivers` | Dict of all attached drivers |
+
 ## Sync vs Async (Python)
 
 | Feature | Sync (`CobraBridge`) | Async (`AsyncBridge`) |
@@ -295,18 +400,74 @@ Same COINES V3 packets over NUS — identical framing and checksums.
 
 ## Publishing
 
-### Python
+### Python — Build a Wheel
 
 ```bash
-cd cobra-bridge/py
-hatch build && hatch publish
+cd py
+pip install build
+python -m build
+# Produces dist/cobra_bridge-0.1.2-py3-none-any.whl
+# Install locally:
+pip install dist/cobra_bridge-0.1.2-py3-none-any.whl
+# Publish to PyPI:
+pip install twine
+twine upload dist/*
 ```
 
 ### JavaScript
 
 ```bash
-cd cobra-bridge/js
+cd js
 npm publish --access public
+```
+
+## COBRA vs coinespy — Key Differences
+
+COBRA is a **lightweight, transport-agnostic** drop-in replacement for [coinespy](https://github.com/boschsensortec/COINES_SDK/tree/main/coines-api/pc/python). It shares the same high-level API surface (`CobraBoard` mirrors `CoinesBoard`) but differs fundamentally in architecture:
+
+| Aspect | coinespy | COBRA |
+|--------|----------|-------|
+| **Transport** | USB-only (wraps C `.dll`/`.so`) | USB-Serial + BLE (pure Python/JS) |
+| **Dependencies** | Requires compiled C library | Pure Python (`pyserial`); optional BLE (`bleak`) |
+| **Async support** | None | `AsyncCobraBoard` with background reader thread |
+| **JavaScript** | None | Full JS mirror (`CobraBoardJs`) |
+| **Protocol** | COINES V3 over USB | COINES V3 over Serial/BLE/NUS |
+| **Streaming** | Built-in (C-level) | Planned (Python async tier) |
+| **Board config** | `coines_config_i2c_bus`, `coines_config_spi_bus` | `config_i2c_bus`, `config_spi_bus` (same semantics) |
+| **Error handling** | C error codes via ctypes | Python `ErrorCodes` enum |
+| **Cross-platform** | Requires platform-specific binary | Runs anywhere Python/JS runs |
+
+### API Mapping (coinespy → COBRA)
+
+| coinespy (`CoinesBoard`) | COBRA (`CobraBoard`) | Notes |
+|--------------------------|----------------------|-------|
+| `open_comm_interface(USB)` | `open_comm_interface(CommInterface.USB)` | Same enum pattern |
+| `close_comm_interface()` | `close_comm_interface()` | Identical |
+| `config_i2c_bus(bus, addr, mode)` | `config_i2c_bus(bus, addr, mode)` | Same enums |
+| `write_i2c(bus, reg, val)` | `write_i2c(bus, reg, val)` | Same signature |
+| `read_i2c(bus, reg, n)` | `read_i2c(bus, reg, n)` | Same signature |
+| `config_spi_bus(bus, cs, speed, mode)` | `config_spi_bus(bus, cs, speed, mode)` | Same enums |
+| `write_spi(bus, reg, val)` | `write_spi(bus, reg, val)` | Same signature |
+| `read_spi(bus, reg, n)` | `read_spi(bus, reg, n)` | Same signature |
+| `read_16bit_i2c(...)` | `read_16bit_i2c(...)` | Same signature |
+| `write_16bit_spi(...)` | `write_16bit_spi(...)` | Same signature |
+| `scan_ble_devices(...)` | *(planned)* | BLE scanning via `BleTransport.scan()` |
+| `config_streaming(...)` | *(planned)* | Streaming in async tier |
+| `read_stream_sensor_data(...)` | *(planned)* | Streaming in async tier |
+
+### Quick Migration
+
+```python
+# Before (coinespy)
+import coinespy as cpy
+board = cpy.CoinesBoard()
+board.open_comm_interface(cpy.CommInterface.USB)
+
+# After (COBRA — drop-in replacement)
+from cobra_bridge.cobra_wrapper import CobraBoard
+from cobra_bridge.constants import CommInterface
+board = CobraBoard()
+board.open_comm_interface(CommInterface.USB)
 ```
 
 ## License

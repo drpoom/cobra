@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cobra-bridge"
+version = "0.2.0"
+description = "COBRA — COines BRidge Access: lightweight, transport-agnostic Bosch AppBoard protocol with sensor-agnostic driver framework for Python"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "John Poom", email = "drpoom@users.noreply.github.com" },
+]
+keywords = ["bosch", "sensortec", "coines", "appboard", "bmm350", "magnetometer", "i2c", "spi", "ble", "serial"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+ble = ["bleak>=0.21"]
+dev = ["hatch", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/drpoom/cobra"
+Repository = "https://github.com/drpoom/cobra"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cobra_bridge"]

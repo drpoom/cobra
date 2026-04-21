@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COBRA — BMM350 Examples</title>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --surface: #2a2a3d;
+            --border: #3d3d56;
+            --text: #cdd6f4;
+            --muted: #7f849c;
+            --accent: #89b4fa;
+            --accent2: #94e2d5;
+            --red: #f38ba8;
+            --green: #a6e3a1;
+            --yellow: #f9e2af;
+            --font-mono: 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+        h1 { font-size: 1.4rem; color: var(--accent); margin-bottom: 4px; }
+        h1 span { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+        .subtitle { color: var(--muted); font-size: 0.75rem; margin-bottom: 20px; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        button {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        button:hover { border-color: var(--accent); color: var(--accent); }
+        button:active { transform: scale(0.97); }
+        button.connect { border-color: var(--accent2); color: var(--accent2); }
+        button.disconnect { border-color: var(--red); color: var(--red); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        .options label {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+        .options input, .options select {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--surface);
+            color: var(--text);
+            width: 80px;
+        }
+        .options input[type="checkbox"] { width: auto; }
+
+        #log {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            max-height: 70vh;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-line { margin: 0; }
+        .log-header { color: var(--accent); font-weight: 600; }
+        .log-ok { color: var(--green); }
+        .log-err { color: var(--red); }
+        .log-data { color: var(--muted); }
+        .log-section { color: var(--yellow); }
+
+        .status {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .status.off { background: var(--muted); }
+        .status.on { background: var(--green); }
+        .status.busy { background: var(--yellow); animation: pulse 0.6s infinite alternate; }
+        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <h1>🧭 COBRA BMM350 Examples <span>v0.2.0</span></h1>
+    <p class="subtitle">Python ports of Bosch BMM350_SensorAPI examples — WebSerial</p>
+
+    <div class="controls">
+        <span class="status off" id="status"></span>
+        <button class="connect" id="btn-connect" onclick="doConnect()">⏚ Connect</button>
+        <button class="disconnect" id="btn-disconnect" onclick="doDisconnect()" disabled>⏼ Disconnect</button>
+        <span style="width:16px"></span>
+        <button onclick="runExample('chip-id')"        id="btn-chip-id" disabled>🔍 Chip ID</button>
+        <button onclick="runExample('polling')"         id="btn-polling" disabled>📡 Polling</button>
+        <button onclick="runExample('normal-mode')"     id="btn-normal" disabled>🔄 Normal Mode</button>
+        <button onclick="runExample('forced-mode')"      id="btn-forced" disabled>⚡ Forced Mode</button>
+        <button onclick="runExample('self-test')"        id="btn-selftest" disabled>🧪 Self Test</button>
+        <button onclick="runExample('magnetic-reset')"   id="btn-reset" disabled>🧲 Mag Reset</button>
+        <button onclick="runExample('config-changes')"   id="btn-config" disabled>⚙ Config Changes</button>
+    </div>
+
+    <div class="options">
+        <label>ODR (Hz):
+            <select id="opt-odr">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="400">400</option>
+            </select>
+        </label>
+        <label>Count:
+            <input id="opt-count" type="number" value="20" min="1" max="1000">
+        </label>
+        <label><input id="opt-compensated" type="checkbox"> Compensated</label>
+        <button onclick="clearLog()">🗑 Clear</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script type="module">
+        import { BMM350Examples } from './src/examples/bmm350_examples.js';
+
+        let ex = null;
+        let running = false;
+
+        // Expose to onclick handlers
+        window.doConnect = async () => {
+            if (running) return;
+            running = true;
+            updateStatus('busy');
+            log('Connecting to AppBoard via WebSerial...', 'section');
+
+            try {
+                ex = new BMM350Examples();
+                await ex.connect();
+                updateStatus('on');
+                setButtons(true);
+                log('✓ Connected and initialized', 'ok');
+            } catch (e) {
+                log(`✗ Connection failed: ${e.message}`, 'err');
+                updateStatus('off');
+            }
+            running = false;
+        };
+
+        window.doDisconnect = async () => {
+            if (ex) {
+                await ex.disconnect();
+                ex = null;
+            }
+            updateStatus('off');
+            setButtons(false);
+            log('Disconnected', 'data');
+        };
+
+        window.runExample = async (name) => {
+            if (!ex || running) return;
+            running = true;
+            updateStatus('busy');
+            disableExampleButtons(true);
+
+            const odr = parseInt(document.getElementById('opt-odr').value);
+            const count = parseInt(document.getElementById('opt-count').value);
+            const compensated = document.getElementById('opt-compensated').checked;
+            const opts = { odr, count, compensated };
+
+            log(`\n▶ Running: ${name}`, 'section');
+
+            try {
+                const map = {
+                    'chip-id':        () => ex.chipId(),
+                    'polling':        () => ex.polling(opts),
+                    'normal-mode':    () => ex.normalMode(opts),
+                    'forced-mode':    () => ex.forcedMode(opts),
+                    'self-test':      () => ex.selfTest(opts),
+                    'magnetic-reset': () => ex.magneticReset(opts),
+                    'config-changes': () => ex.configChanges(opts),
+                };
+                await map[name]();
+                log(`✓ ${name} complete`, 'ok');
+            } catch (e) {
+                log(`✗ ${name} failed: ${e.message}`, 'err');
+            }
+
+            running = false;
+            updateStatus('on');
+            disableExampleButtons(false);
+        };
+
+        window.clearLog = () => {
+            document.getElementById('log').textContent = '';
+        };
+
+        // ── Console output interceptor ──────────────────────────────────
+
+        const origLog = console.log;
+        console.log = (...args) => {
+            origLog(...args);
+            const text = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            appendLog(text);
+        };
+
+        function appendLog(text) {
+            const el = document.getElementById('log');
+            let cls = 'log-line';
+            if (text.includes('━') || text.includes('──') || text.includes('▶')) cls += ' log-section';
+            else if (text.includes('✓') || text.includes('PASS')) cls += ' log-ok';
+            else if (text.includes('✗') || text.includes('FAIL')) cls += ' log-err';
+            else if (text.includes('Timestamp') || text.includes(',')) cls += ' log-data';
+
+            const line = document.createElement('div');
+            line.className = cls;
+            line.textContent = text;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function log(text, cls = '') {
+            const el = document.getElementById('log');
+            const line = document.createElement('div');
+            line.className = `log-line ${cls ? 'log-' + cls : ''}`;
+            line.textContent = text;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // ── UI helpers ──────────────────────────────────────────────────
+
+        function updateStatus(state) {
+            const el = document.getElementById('status');
+            el.className = 'status ' + state;
+        }
+
+        function setButtons(connected) {
+            document.getElementById('btn-connect').disabled = connected;
+            document.getElementById('btn-disconnect').disabled = !connected;
+            const exampleBtns = ['chip-id', 'polling', 'normal', 'forced', 'selftest', 'reset', 'config'];
+            for (const id of exampleBtns) {
+                document.getElementById('btn-' + id).disabled = !connected;
+            }
+        }
+
+        function disableExampleButtons(disabled) {
+            const exampleBtns = ['chip-id', 'polling', 'normal', 'forced', 'selftest', 'reset', 'config'];
+            for (const id of exampleBtns) {
+                document.getElementById('btn-' + id).disabled = disabled;
+            }
+        }
+
+        setButtons(false);
+    </script>
+</body>
+</html>

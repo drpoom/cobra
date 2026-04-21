@@ -1,0 +1,43 @@
+{
+  "name": "cobra-bridge",
+  "version": "0.2.0",
+  "description": "COines BRidge Access — Bosch AppBoard protocol with sensor-agnostic driver framework for JavaScript",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./transport": "./src/transport.js",
+    "./sync": "./src/sync.js",
+    "./constants": "./src/constants.js",
+    "./drivers/base": "./src/drivers/base.js",
+    "./drivers/utils": "./src/drivers/utils.js",
+    "./drivers/bmm350": "./src/drivers/bmm350.js",
+    "./drivers/bmm350_constants": "./src/drivers/bmm350_constants.js",
+    "./examples/bmm350": "./src/examples/bmm350_examples.js"
+  },
+  "files": [
+    "src/"
+  ],
+  "keywords": [
+    "bosch",
+    "sensortec",
+    "coines",
+    "appboard",
+    "bmm350",
+    "magnetometer",
+    "webserial",
+    "webbluetooth",
+    "ble"
+  ],
+  "license": "MIT",
+  "author": "John Poom",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/drpoom/cobra.git",
+    "directory": "cobra-bridge/js"
+  },
+  "homepage": "https://github.com/drpoom/cobra",
+  "engines": {
+    "node": ">=18"
+  }
+}

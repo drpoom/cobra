@@ -1,0 +1,193 @@
+{
+  "_meta": {
+    "name": "BMM350",
+    "sensor_type": "magnetometer",
+    "family": "BMM",
+    "manufacturer": "Bosch Sensortec",
+    "api_version": "1.10.0",
+    "description": "BMM350 tri-axis magnetometer with 24-bit data output and OTP compensation"
+  },
+  "i2c_addr": 20,
+  "i2c_addr_hex": "0x14",
+  "chip_id": 51,
+  "chip_id_hex": "0x33",
+  "sensitivity_ut_per_lsb": 0.166667,
+  "data_length_bytes": 12,
+  "spi_read_cmd": 128,
+  "spi_read_cmd_hex": "0x80",
+  "spi_write_cmd": 0,
+  "registers": {
+    "CHIP_ID": {
+      "address": 0,
+      "hex": "0x00",
+      "access": "R",
+      "description": "Chip ID (expected 0x33)"
+    },
+    "PMU_CMD_AGGR_SET": {
+      "address": 4,
+      "hex": "0x04",
+      "access": "R/W",
+      "description": "ODR and averaging configuration"
+    },
+    "PMU_CMD_AXIS_EN": {
+      "address": 5,
+      "hex": "0x05",
+      "access": "R/W",
+      "description": "Axis enable/disable"
+    },
+    "PMU_CMD": {
+      "address": 6,
+      "hex": "0x06",
+      "access": "W",
+      "description": "Power mode command (SUS=0x00, NM=0x01, UPD_OAE=0x02, FORCED=0x03, NM_50HZ=0x04, FGR=0x05, FGR_FAST=0x06, BR=0x07, BR_FAST=0x08)"
+    },
+    "PMU_CMD_STATUS_0": {
+      "address": 8,
+      "hex": "0x08",
+      "access": "R",
+      "description": "PMU command status"
+    },
+    "INT_CTRL": {
+      "address": 17,
+      "hex": "0x11",
+      "access": "R/W",
+      "description": "Interrupt control"
+    },
+    "INT_STATUS": {
+      "address": 18,
+      "hex": "0x12",
+      "access": "R",
+      "description": "Interrupt status (bit 0 = DRDY)"
+    },
+    "OTP_CMD_REG": {
+      "address": 80,
+      "hex": "0x50",
+      "access": "W",
+      "description": "OTP command register"
+    },
+    "OTP_DATA_MSB_REG": {
+      "address": 82,
+      "hex": "0x52",
+      "access": "R",
+      "description": "OTP data MSB"
+    },
+    "OTP_DATA_LSB_REG": {
+      "address": 83,
+      "hex": "0x53",
+      "access": "R",
+      "description": "OTP data LSB"
+    },
+    "OTP_STATUS_REG": {
+      "address": 85,
+      "hex": "0x55",
+      "access": "R",
+      "description": "OTP status register"
+    },
+    "CMD_REG": {
+      "address": 36,
+      "hex": "0x24",
+      "access": "W",
+      "description": "Command register (soft-reset = 0xB6)"
+    },
+    "MAG_X_XLSB": {
+      "address": 49,
+      "hex": "0x31",
+      "access": "R",
+      "description": "Mag X 24-bit data (XLSB, LSB, MSB)"
+    },
+    "MAG_Y_XLSB": {
+      "address": 52,
+      "hex": "0x34",
+      "access": "R",
+      "description": "Mag Y 24-bit data (XLSB, LSB, MSB)"
+    },
+    "MAG_Z_XLSB": {
+      "address": 55,
+      "hex": "0x37",
+      "access": "R",
+      "description": "Mag Z 24-bit data (XLSB, LSB, MSB)"
+    },
+    "TEMP_XLSB": {
+      "address": 58,
+      "hex": "0x3A",
+      "access": "R",
+      "description": "Temperature 24-bit data (XLSB, LSB, MSB)"
+    },
+    "ERR_STAT": {
+      "address": 63,
+      "hex": "0x3F",
+      "access": "R",
+      "description": "Error status"
+    }
+  },
+  "pmu_commands": {
+    "SUS": 0,
+    "NM": 1,
+    "UPD_OAE": 2,
+    "FORCED": 3,
+    "NM_50HZ": 4,
+    "FGR": 5,
+    "FGR_FAST": 6,
+    "BR": 7,
+    "BR_FAST": 8,
+    "SOFT_RESET": 182
+  },
+  "pmu_status": {
+    "SUSPEND": 0,
+    "NORMAL": 1,
+    "FORCED": 2,
+    "CONTINUOUS": 3
+  },
+  "odr": {
+    "400_HZ": 2,
+    "200_HZ": 3,
+    "100_HZ": 4,
+    "50_HZ": 5,
+    "25_HZ": 6,
+    "12_5_HZ": 7,
+    "6_25_HZ": 8,
+    "3_125_HZ": 9,
+    "1_5625_HZ": 10
+  },
+  "averaging": {
+    "NO_AVG": 0,
+    "AVG_2": 1,
+    "AVG_4": 2,
+    "AVG_8": 3
+  },
+  "otp_addresses": {
+    "TEMP_OFF_SENS": 13,
+    "MAG_OFFSET_X": 14,
+    "MAG_OFFSET_Y": 15,
+    "MAG_OFFSET_Z": 16,
+    "MAG_SENS_X": 16,
+    "MAG_SENS_Y": 17,
+    "MAG_SENS_Z": 17,
+    "MAG_TCO_X": 18,
+    "MAG_TCO_Y": 19,
+    "MAG_TCO_Z": 20,
+    "MAG_TCS_X": 18,
+    "MAG_TCS_Y": 19,
+    "MAG_TCS_Z": 20,
+    "MAG_DUT_T_0": 24,
+    "CROSS_X_Y": 21,
+    "CROSS_Y_X": 21,
+    "CROSS_Z_X": 22,
+    "CROSS_Z_Y": 22
+  },
+  "conversion": {
+    "description": "Default (no-OTP) raw-to-μT coefficients from official Bosch BMM350_SensorAPI v1.10.0",
+    "bxy_sens": 14.55,
+    "bz_sens": 9.0,
+    "temp_sens": 0.00204,
+    "ina_xy_gain_trgt": 19.46,
+    "ina_z_gain_trgt": 31.0,
+    "adc_gain": 0.6666666666666666,
+    "lut_gain": 0.714607238769531,
+    "power": 0.95367431640625,
+    "lsb_to_ut_xy": 0.007069979,
+    "lsb_to_ut_z": 0.007174964,
+    "lsb_to_degc": 0.000981282,
+    "temp_offset_degc": 25.49
+  }
+}

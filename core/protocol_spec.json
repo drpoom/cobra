@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "name": "COBRA Protocol Specification",
+    "name": "COINES Protocol Specification",
     "version": "3.0.0",
     "description": "Single source of truth for COINES V3 protocol constants and BMM350 register map. All implementations (Python, JavaScript, etc.) must derive their constants from this file.",
     "license": "MIT",
-    "author": "drpoom"
+    "author": "COBRA"
   },
   "packet": {
     "header": 170,
@@ -25,7 +25,9 @@
       "SET_VDDIO": 6,
       "INT_CONFIG": 7,
       "CONFIG_I2C_BUS": 8,
-      "CONFIG_SPI_BUS": 9
+      "CONFIG_SPI_BUS": 9,
+      "DECONFIG_I2C_BUS": 36,
+      "DECONFIG_SPI_BUS": 37
     },
     "i2c": {
       "WRITE": 13,
@@ -47,6 +49,14 @@
       "HIGH": 2,
       "400K": 0,
       "1M": 1
+    },
+    "mode": {
+      "STANDARD_MODE": 0,
+      "FAST_MODE": 1
+    },
+    "transfer_bits": {
+      "I2C8BIT": 0,
+      "I2C16BIT": 1
     }
   },
   "spi": {
@@ -55,12 +65,46 @@
       "BUS_1": 1
     },
     "speed": {
-      "5MHZ": 0,
-      "10MHZ": 1
+      "50KHZ": 50000,
+      "100KHZ": 100000,
+      "250KHZ": 250000,
+      "500KHZ": 500000,
+      "1MHZ": 1000000,
+      "2MHZ": 2000000,
+      "4MHZ": 4000000,
+      "8MHZ": 8000000,
+      "10MHZ": 10000000,
+      "20MHZ": 20000000
     },
     "mode": {
       "MODE_0": 0,
+      "MODE_1": 1,
+      "MODE_2": 2,
       "MODE_3": 3
+    },
+    "transfer_bits": {
+      "SPI8BIT": 0,
+      "SPI16BIT": 1
+    }
+  },
+  "streaming": {
+    "MODE": {
+      "FIFO": 0,
+      "INTERRUPT": 1
+    },
+    "STATE": {
+      "STOP": 0,
+      "START": 1
+    }
+  },
+  "timer": {
+    "CONFIG": {
+      "STOP": 0,
+      "START": 1
+    },
+    "TIMESTAMP_CONFIG": {
+      "DISABLE": 0,
+      "ENABLE": 1
     }
   },
   "shuttle_board": {
@@ -342,188 +386,70 @@
       ]
     }
   },
-  "sensors": {
-    "bmm350": {
-      "i2c_addr": 20,
-      "i2c_addr_hex": "0x14",
-      "chip_id": 51,
-      "chip_id_hex": "0x33",
-      "sensitivity_ut_per_lsb": 0.166667,
-      "data_length_bytes": 12,
-      "registers": {
-        "CHIP_ID": {
-          "address": 0,
-          "hex": "0x00",
-          "access": "R",
-          "description": "Chip ID (expected 0x33)"
-        },
-        "PMU_CMD_AGGR_SET": {
-          "address": 4,
-          "hex": "0x04",
-          "access": "R/W",
-          "description": "ODR and averaging configuration"
-        },
-        "PMU_CMD_AXIS_EN": {
-          "address": 5,
-          "hex": "0x05",
-          "access": "R/W",
-          "description": "Axis enable/disable"
-        },
-        "PMU_CMD": {
-          "address": 6,
-          "hex": "0x06",
-          "access": "W",
-          "description": "Power mode command (SUS=0x00, NM=0x01, UPD_OAE=0x02, FORCED=0x03, NM_50HZ=0x04, FGR=0x05, FGR_FAST=0x06, BR=0x07, BR_FAST=0x08)"
-        },
-        "PMU_CMD_STATUS_0": {
-          "address": 8,
-          "hex": "0x08",
-          "access": "R",
-          "description": "PMU command status"
-        },
-        "INT_CTRL": {
-          "address": 17,
-          "hex": "0x11",
-          "access": "R/W",
-          "description": "Interrupt control"
-        },
-        "INT_STATUS": {
-          "address": 18,
-          "hex": "0x12",
-          "access": "R",
-          "description": "Interrupt status (bit 0 = DRDY)"
-        },
-        "OTP_CMD_REG": {
-          "address": 80,
-          "hex": "0x50",
-          "access": "W",
-          "description": "OTP command register"
-        },
-        "OTP_DATA_MSB_REG": {
-          "address": 82,
-          "hex": "0x52",
-          "access": "R",
-          "description": "OTP data MSB"
-        },
-        "OTP_DATA_LSB_REG": {
-          "address": 83,
-          "hex": "0x53",
-          "access": "R",
-          "description": "OTP data LSB"
-        },
-        "OTP_STATUS_REG": {
-          "address": 85,
-          "hex": "0x55",
-          "access": "R",
-          "description": "OTP status register"
-        },
-        "CMD_REG": {
-          "address": 36,
-          "hex": "0x24",
-          "access": "W",
-          "description": "Command register (soft-reset = 0xB6)"
-        },
-        "MAG_X_XLSB": {
-          "address": 49,
-          "hex": "0x31",
-          "access": "R",
-          "description": "Mag X 24-bit data (XLSB, LSB, MSB)"
-        },
-        "MAG_Y_XLSB": {
-          "address": 52,
-          "hex": "0x34",
-          "access": "R",
-          "description": "Mag Y 24-bit data (XLSB, LSB, MSB)"
-        },
-        "MAG_Z_XLSB": {
-          "address": 55,
-          "hex": "0x37",
-          "access": "R",
-          "description": "Mag Z 24-bit data (XLSB, LSB, MSB)"
-        },
-        "TEMP_XLSB": {
-          "address": 58,
-          "hex": "0x3A",
-          "access": "R",
-          "description": "Temperature 24-bit data (XLSB, LSB, MSB)"
-        },
-        "ERR_STAT": {
-          "address": 63,
-          "hex": "0x3F",
-          "access": "R",
-          "description": "Error status"
-        }
-      },
-      "pmu_commands": {
-        "SUS": 0,
-        "NM": 1,
-        "UPD_OAE": 2,
-        "FORCED": 3,
-        "NM_50HZ": 4,
-        "FGR": 5,
-        "FGR_FAST": 6,
-        "BR": 7,
-        "BR_FAST": 8,
-        "SOFT_RESET": 182
-      },
-      "pmu_status": {
-        "SUSPEND": 0,
-        "NORMAL": 1,
-        "FORCED": 2,
-        "CONTINUOUS": 3
-      },
-      "odr": {
-        "400_HZ": 2,
-        "200_HZ": 3,
-        "100_HZ": 4,
-        "50_HZ": 5,
-        "25_HZ": 6,
-        "12_5_HZ": 7,
-        "6_25_HZ": 8,
-        "3_125_HZ": 9,
-        "1_5625_HZ": 10
-      },
-      "averaging": {
-        "NO_AVG": 0,
-        "AVG_2": 1,
-        "AVG_4": 2,
-        "AVG_8": 3
-      },
-      "otp_addresses": {
-        "TEMP_OFF_SENS": 13,
-        "MAG_OFFSET_X": 14,
-        "MAG_OFFSET_Y": 15,
-        "MAG_OFFSET_Z": 16,
-        "MAG_SENS_X": 16,
-        "MAG_SENS_Y": 17,
-        "MAG_SENS_Z": 17,
-        "MAG_TCO_X": 18,
-        "MAG_TCO_Y": 19,
-        "MAG_TCO_Z": 20,
-        "MAG_TCS_X": 18,
-        "MAG_TCS_Y": 19,
-        "MAG_TCS_Z": 20,
-        "MAG_DUT_T_0": 24,
-        "CROSS_X_Y": 21,
-        "CROSS_Y_X": 21,
-        "CROSS_Z_X": 22,
-        "CROSS_Z_Y": 22
-      },
-      "conversion": {
-        "description": "Default (no-OTP) raw-to-μT coefficients from official Bosch BMM350_SensorAPI v1.10.0",
-        "bxy_sens": 14.55,
-        "bz_sens": 9.0,
-        "temp_sens": 0.00204,
-        "ina_xy_gain_trgt": 19.46,
-        "ina_z_gain_trgt": 31.0,
-        "adc_gain": 0.6666666666666666,
-        "lut_gain": 0.714607238769531,
-        "power": 0.95367431640625,
-        "lsb_to_ut_xy": 0.007069979,
-        "lsb_to_ut_z": 0.007174964,
-        "lsb_to_degc": 0.000981282,
-        "temp_offset_degc": 25.49
-      }
+  "interfaces": {
+    "COMM_INTERFACE": {
+      "USB": 0,
+      "BLE": 1,
+      "VIRTUAL": 2
+    }
+  },
+  "error_codes": {
+    "COINES_SUCCESS": 0,
+    "COINES_E_FAILURE": -1,
+    "COINES_E_COMM_IO_ERROR": -2,
+    "COINES_E_COMM_INIT_FAILED": -3,
+    "COINES_E_UNABLE_OPEN_DEVICE": -4,
+    "COINES_E_DEVICE_NOT_FOUND": -5,
+    "COINES_E_UNABLE_CLAIM_INTERFACE": -6,
+    "COINES_E_MEMORY_ALLOCATION": -7,
+    "COINES_E_NOT_SUPPORTED": -8,
+    "COINES_E_NULL_PTR": -9,
+    "COINES_E_INVALID_ARGUMENT": -10,
+    "COINES_E_INVALID_PTR": -11,
+    "COINES_E_SENSOR_INTF_INIT_FAILED": -12,
+    "COINES_E_SPI_BUS_INIT_FAILED": -13,
+    "COINES_E_I2C_BUS_INIT_FAILED": -14,
+    "COINES_E_MAX_EXCEEDED": -15,
+    "COINES_E_SPI_READ_WRITE_FAILED": -16,
+    "COINES_E_I2C_READ_WRITE_FAILED": -17,
+    "COINES_E_READ_WRITE_LENGTH_INVALID": -18,
+    "COINES_E_COMM_ALREADY_OPEN": -19,
+    "COINES_E_STREAM_NOT_ENABLED": -20,
+    "COINES_E_STREAM_ALREADY_ENABLED": -21,
+    "COINES_E_STREAM_REMAINING_SAMPLES": -22,
+    "COINES_E_STREAM_SCAN_TIMEOUT": -23,
+    "COINES_E_STREAM_READ_FAILED": -24,
+    "COINES_E_BOARD_NOT_INITIALIZED": -25,
+    "COINES_E_SHUTTLE_ID_UNKNOWN": -26,
+    "COINES_E_INTERRUPT_NOT_CONFIGURED": -27,
+    "COINES_E_GPIO_NOT_SUPPORTED": -28,
+    "COINES_E_UNABLE_CLOSE_DEVICE": -29,
+    "COINES_E_FW_LOAD_FAILED": -30,
+    "COINES_E_NOT_FOUND": -31,
+    "COINES_E_INVALID_SHUTTLE_ID": -32,
+    "COINES_E_INVALID_SENSOR_ID": -33,
+    "COINES_E_INSUFF_BUFFER_SIZE": -34,
+    "COINES_E_ADAPTER_CHIP_FW_VERSION_MISMATCH": -35,
+    "COINES_E_POLLING_TIMEOUT": -36
+  },
+  "gpio": {
+    "PIN_DIRECTION": {
+      "INPUT": 0,
+      "OUTPUT": 1
+    },
+    "PIN_VALUE": {
+      "LOW": 0,
+      "HIGH": 1
+    },
+    "MULTI_IO_PIN": {
+      "COINES_MINI_SHUTTLE_PIN_CS": 0,
+      "COINES_MINI_SHUTTLE_PIN_2_3": 1,
+      "COINES_MINI_SHUTTLE_PIN_2_4": 2,
+      "COINES_MINI_SHUTTLE_PIN_2_5": 3,
+      "COINES_MINI_SHUTTLE_PIN_1_6": 4,
+      "COINES_MINI_SHUTTLE_PIN_1_7": 5,
+      "COINES_MINI_SHUTTLE_PIN_1_8": 6,
+      "COINES_MINI_SHUTTLE_PIN_1_9": 7
     }
   }
 }
